@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OAT Prep — Study Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="dashboard">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="index.html"><span class="lens"></span>OAT<b>Prep</b></a>
+      <button class="nav-toggle" aria-label="Menu">&#9776;</button>
+      <nav class="nav">
+        <a href="index.html">Home</a>
+        <a href="review.html">Review</a>
+        <a href="practice.html">Practice</a>
+        <a href="test.html">Timed Tests</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="page-head">
+      <div class="eyebrow">Optometry Admission Test</div>
+      <h1>Your OAT study command center</h1>
+      <p>Deep content review, topic-by-topic question banks with worked explanations, and full timed exam simulations scored on the OAT's 200&ndash;400 scale. Work through it section by section &mdash; you've got this.</p>
+    </div>
+
+    <div class="grid cols-3" style="margin-bottom:2.5rem;">
+      <a class="card card-link mode-card" href="review.html">
+        <div class="mc-icon">&#128218;</div>
+        <h3>Content Review</h3>
+        <p>Deep, high-yield notes for every subject &mdash; the concepts the OAT actually tests, organized so you can find and drill weak spots fast.</p>
+      </a>
+      <a class="card card-link mode-card" href="practice.html">
+        <div class="mc-icon">&#9997;&#65039;</div>
+        <h3>Practice Questions</h3>
+        <p>Untimed banks with instant explanations. Answer, see why, and learn as you go. Shuffle to keep yourself honest.</p>
+      </a>
+      <a class="card card-link mode-card" href="test.html">
+        <div class="mc-icon">&#9201;&#65039;</div>
+        <h3>Timed Tests</h3>
+        <p>Full exam simulations with a countdown timer, question palette, flagging, and a scored results breakdown.</p>
+      </a>
+    </div>
+
+    <div class="grid cols-2">
+      <div class="card">
+        <div class="flex between items-center mb-2">
+          <h2 style="font-family:var(--font-display);font-size:1.4rem;font-weight:600;">Sections</h2>
+          <span class="muted" style="font-size:.85rem;"><span id="total-q">0</span> practice questions</span>
+        </div>
+        <div id="section-list"></div>
+      </div>
+
+      <div class="card" style="display:flex;flex-direction:column;">
+        <h2 style="font-family:var(--font-display);font-size:1.4rem;font-weight:600;margin-bottom:.6rem;">The exam at a glance</h2>
+        <p class="muted" style="font-size:.9rem;margin-bottom:1rem;">Four scored sections, computer-based, ~5 hours total.</p>
+        <div style="font-size:.92rem;color:var(--ink-soft);line-height:1.9;">
+          <div class="flex between"><span><strong>Survey of Natural Sciences</strong></span><span class="muted">100 Q &middot; 90 min</span></div>
+          <div class="flex between" style="padding-left:1rem;"><span>&mdash; Biology</span><span class="muted">40</span></div>
+          <div class="flex between" style="padding-left:1rem;"><span>&mdash; General Chemistry</span><span class="muted">30</span></div>
+          <div class="flex between" style="padding-left:1rem;"><span>&mdash; Organic Chemistry</span><span class="muted">30</span></div>
+          <div class="flex between"><span><strong>Reading Comprehension</strong></span><span class="muted">50 Q &middot; 60 min</span></div>
+          <div class="flex between"><span><strong>Physics</strong></span><span class="muted">40 Q &middot; 50 min</span></div>
+          <div class="flex between"><span><strong>Quantitative Reasoning</strong></span><span class="muted">40 Q &middot; 45 min</span></div>
+        </div>
+        <div class="callout" style="margin-top:1.2rem;">Scored 200&ndash;400 per section (&asymp;300 is roughly the 50th percentile). <strong>No penalty for guessing</strong> &mdash; always fill in every answer.</div>
+        <div id="best-score" class="muted" style="font-size:.88rem;margin-top:auto;padding-top:1rem;"></div>
+      </div>
+    </div>
+
+    <p class="note-line">Study tool built for focused OAT prep. Content is for review and practice &mdash; always cross-check with official ADA materials at oat.ada.org as your exam date approaches.</p>
+  </main>
+
+  <script src="data/biology.js"></script>
+  <script src="data/genchem.js"></script>
+  <script src="data/ochem.js"></script>
+  <script src="data/physics.js"></script>
+  <script src="data/reading.js"></script>
+  <script src="data/quant.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
