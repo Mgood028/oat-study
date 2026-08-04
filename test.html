@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timed Tests — OAT Prep</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="test">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="index.html"><span class="lens"></span>OAT<b>Prep</b></a>
+      <button class="nav-toggle" aria-label="Menu">&#9776;</button>
+      <nav class="nav">
+        <a href="index.html">Home</a>
+        <a href="review.html">Review</a>
+        <a href="practice.html">Practice</a>
+        <a href="test.html">Timed Tests</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- test bar (only visible during a running test) -->
+  <div class="test-bar hidden" id="test-bar-wrap">
+    <div class="test-bar-inner">
+      <div class="flex gap items-center">
+        <strong id="test-name" style="font-family:var(--font-display);font-size:1.05rem;"></strong>
+        <span class="test-progress" id="test-progress"></span>
+      </div>
+      <div class="timer" id="test-timer">--:--</div>
+    </div>
+  </div>
+
+  <main class="wrap">
+    <!-- chooser -->
+    <div id="test-chooser-wrap">
+      <div class="page-head">
+        <div class="eyebrow">Timed Tests</div>
+        <h1>Simulate the real thing</h1>
+        <p>Pick a test below. A countdown starts immediately, you can flag questions and jump around with the palette, and you'll get a scored breakdown with full explanations at the end. Timers are representative &mdash; the real exam has more questions per section.</p>
+      </div>
+      <div class="grid cols-2" id="test-chooser"></div>
+      <div class="callout" style="margin-top:1.5rem;">
+        <strong>Tip:</strong> there's no penalty for guessing on the OAT, so answer every question before the clock runs out. Use the &#9873; flag to mark ones you want to revisit.
+      </div>
+    </div>
+
+    <!-- runner -->
+    <div id="test-runner" class="hidden">
+      <div class="palette" id="test-palette"></div>
+      <div id="test-question"></div>
+      <div class="test-footer">
+        <div class="flex gap">
+          <button class="btn" id="prev-btn">&larr; Prev</button>
+          <button class="btn" id="next-btn">Next &rarr;</button>
+        </div>
+        <div class="flex gap">
+          <button class="btn btn-ghost" id="flag-btn">&#9872; Flag for review</button>
+          <button class="btn btn-primary" id="submit-btn">Submit test</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- results -->
+    <div id="test-results" class="hidden"></div>
+  </main>
+
+  <script src="data/biology.js"></script>
+  <script src="data/genchem.js"></script>
+  <script src="data/ochem.js"></script>
+  <script src="data/physics.js"></script>
+  <script src="data/reading.js"></script>
+  <script src="data/quant.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
