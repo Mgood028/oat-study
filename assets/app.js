@@ -43,6 +43,49 @@
   function totalQuestions(secId) { return (C[secId] && C[secId].questions.length) || 0; }
   function fmtTime(s) { var m = Math.floor(s / 60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
 
+  /* ---------- molecule structures (rendered from SMILES) ---------- */
+  var _molDrawers = {};
+  function molDrawer(w, h) {
+    var k = w + 'x' + h;
+    if (!_molDrawers[k] && window.SmilesDrawer) {
+      _molDrawers[k] = new window.SmilesDrawer.SvgDrawer({ width: w, height: h, padding: 6, bondThickness: 1.1, compactDrawing: false, terminalCarbons: true });
+    }
+    return _molDrawers[k];
+  }
+  // Draw every [data-smiles] element inside root that hasn't been drawn yet.
+  function renderMolecules(root) {
+    if (!window.SmilesDrawer || !root) return;
+    $$('[data-smiles]:not([data-mol-done])', root).forEach(function (elm) {
+      elm.setAttribute('data-mol-done', '1');
+      var smi = elm.getAttribute('data-smiles');
+      var w = parseInt(elm.getAttribute('data-w') || '0', 10) || 220;
+      var h = parseInt(elm.getAttribute('data-h') || '0', 10) || 160;
+      var drawer = molDrawer(w, h);
+      if (!drawer) return;
+      var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      elm.insertBefore(svg, elm.firstChild);
+      try {
+        window.SmilesDrawer.parse(smi, function (tree) {
+          try { drawer.draw(tree, svg, 'light'); }
+          catch (e) { svg.remove(); }
+        }, function () { svg.remove(); });
+      } catch (e) { svg.remove(); }
+    });
+  }
+  // stem molecule markup (optional, when a question has q.smiles)
+  function stemMolHTML(q) {
+    if (!q.smiles) return '';
+    var w = q.smilesW || 280, h = q.smilesH || 200;
+    return '<div class="q-mol-wrap"><div class="mol q-mol" data-smiles="' + q.smiles + '" data-w="' + w + '" data-h="' + h + '"></div></div>';
+  }
+  // inner markup for one answer option (text or molecule)
+  function optionInnerHTML(q, oi) {
+    if (q.optionSmiles) {
+      return '<span class="letter">' + letter(oi) + '</span><div class="mol" data-smiles="' + q.optionSmiles[oi] + '" data-w="150" data-h="115"></div>';
+    }
+    return '<span class="letter">' + letter(oi) + '</span><span>' + q.options[oi] + '</span>';
+  }
+
   /* ---------- rough scaled-score estimate (200–400) ---------- */
   // The real OAT uses equated scaling we can't reproduce. This is a transparent,
   // linear approximation for motivation only, always shown with a disclaimer.
@@ -154,6 +197,8 @@
       body.appendChild(block);
     });
 
+    renderMolecules(body);
+
     // practice CTA
     var cta = $('#review-cta');
     if (cta) cta.href = 'practice.html?section=' + secId;
@@ -219,18 +264,19 @@
     practiceState.order.forEach(function (qi, displayIdx) {
       wrap.appendChild(buildPracticeCard(s.questions[qi], displayIdx + 1));
     });
+    renderMolecules(wrap);
   }
 
   function buildPracticeCard(q, num) {
     var card = el('div', 'question');
     var meta = '<div class="q-meta"><span class="q-num">Q' + num + '</span><span class="q-topic">' + q.topic + '</span></div>';
-    var stem = '<div class="q-stem">' + q.stem + '</div>';
+    var stem = '<div class="q-stem">' + q.stem + '</div>' + stemMolHTML(q);
     card.innerHTML = meta + stem;
 
     var opts = el('div', 'options');
     q.options.forEach(function (text, i) {
-      var b = el('button', 'option');
-      b.innerHTML = '<span class="letter">' + letter(i) + '</span><span>' + text + '</span>';
+      var b = el('button', q.optionSmiles ? 'option opt-mol-btn' : 'option');
+      b.innerHTML = optionInnerHTML(q, i);
       b.addEventListener('click', function () { answerPractice(card, opts, exp, q, i); });
       opts.appendChild(b);
     });
@@ -377,13 +423,13 @@
     card.innerHTML =
       '<div class="q-meta"><span class="q-num">Question ' + (i + 1) + ' of ' + testState.items.length + '</span>' +
       '<span class="q-topic">' + C[item.section].short + ' · ' + q.topic + '</span></div>' +
-      '<div class="q-stem">' + q.stem + '</div>';
+      '<div class="q-stem">' + q.stem + '</div>' + stemMolHTML(q);
 
     var opts = el('div', 'options');
     q.options.forEach(function (text, oi) {
-      var b = el('button', 'option');
+      var b = el('button', q.optionSmiles ? 'option opt-mol-btn' : 'option');
       if (testState.answers[i] === oi) b.classList.add('chosen-flag');
-      b.innerHTML = '<span class="letter">' + letter(oi) + '</span><span>' + text + '</span>';
+      b.innerHTML = optionInnerHTML(q, oi);
       b.addEventListener('click', function () {
         testState.answers[i] = oi;
         renderTestQuestion();
@@ -393,6 +439,7 @@
     });
     card.appendChild(opts);
     host.appendChild(card);
+    renderMolecules(host);
 
     $('#flag-btn').textContent = testState.flags[i] ? '⚑ Unflag' : '⚐ Flag for review';
     $('#test-progress').textContent =
@@ -497,11 +544,11 @@
       card.innerHTML =
         '<div class="q-meta"><span class="q-num">Q' + (i + 1) + '</span>' +
         '<span class="q-topic">' + C[item.section].short + ' · ' + q.topic + '</span></div>' +
-        (q.passageTitle ? '<div class="q-stem"><span class="passage-ref">(' + q.passageTitle + ')</span><br>' + q.stem + '</div>' : '<div class="q-stem">' + q.stem + '</div>');
+        (q.passageTitle ? '<div class="q-stem"><span class="passage-ref">(' + q.passageTitle + ')</span><br>' + q.stem + '</div>' : '<div class="q-stem">' + q.stem + '</div>') + stemMolHTML(q);
       var opts = el('div', 'options');
       q.options.forEach(function (text, oi) {
-        var b = el('button', 'option'); b.disabled = true;
-        b.innerHTML = '<span class="letter">' + letter(oi) + '</span><span>' + text + '</span>';
+        var b = el('button', q.optionSmiles ? 'option opt-mol-btn' : 'option'); b.disabled = true;
+        b.innerHTML = optionInnerHTML(q, oi);
         if (oi === q.answer) b.classList.add('correct');
         if (oi === chosen && !right) b.classList.add('wrong');
         opts.appendChild(b);
@@ -515,6 +562,7 @@
       card.appendChild(exp);
       host.appendChild(card);
     });
+    renderMolecules(host);
   }
 
   /* ==========================================================

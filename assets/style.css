@@ -533,6 +533,158 @@ a:hover { text-decoration: underline; }
   margin-top: 2.5rem; padding-top: 1.2rem; border-top: 1px solid var(--line);
 }
 
+/* ── molecule structures (SMILES-rendered SVG) ── */
+.mol-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.8rem;
+  margin: 1.2rem 0;
+}
+.mol {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  padding: 0.6rem 0.5rem 0.5rem;
+  text-align: center;
+}
+.mol svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+.mol .mol-cap {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  margin-top: 0.4rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.mol .mol-cap .sub { display: block; font-weight: 400; color: var(--muted); font-size: 0.72rem; }
+/* larger, centered molecule attached to a question stem */
+.q-mol {
+  display: inline-block;
+  margin: 0.2rem auto 1rem;
+  min-width: 200px;
+}
+.q-mol-wrap { text-align: center; }
+/* molecule shown as an answer option */
+.option .mol {
+  background: transparent;
+  border: none;
+  padding: 0;
+  flex: 1;
+}
+.option.opt-mol-btn { align-items: center; }
+.mol-err { color: var(--muted); font-size: 0.8rem; font-style: italic; }
+
+/* ── reaction schemes (mol → mol, with reagents over the arrow) ── */
+.rxn-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 1.2rem 0;
+}
+.rxn-row .mol { flex-shrink: 0; }
+.rxn-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 84px;
+  flex-shrink: 0;
+  padding: 0 0.3rem;
+  align-self: center;
+}
+.rxn-arrow .rxn-top,
+.rxn-arrow .rxn-bottom {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-align: center;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.rxn-arrow svg { width: 72px; height: 14px; display: block; }
+.rxn-arrow svg line, .rxn-arrow svg path { stroke: var(--ink-soft); }
+
+/* ── mechanism / arrow-pushing diagrams (hand-drawn SVG) ── */
+.mech-diagram {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  padding: 1.1rem 1rem 0.9rem;
+  margin: 1.2rem 0;
+  overflow-x: auto;
+}
+.mech-diagram svg { display: block; margin: 0 auto; min-width: 420px; }
+.mech-diagram .mech-cap {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  margin-top: 0.5rem;
+}
+.mech-lbl { font-family: var(--font-body); font-size: 13px; fill: var(--ink); }
+.mech-lbl-sm { font-family: var(--font-body); font-size: 10px; fill: var(--ink-soft); }
+.mech-bond { stroke: var(--ink); stroke-width: 1.6; fill: none; }
+.mech-arrow { stroke: var(--primary); stroke-width: 1.8; fill: none; }
+.mech-charge { font-family: var(--font-body); font-size: 11px; fill: var(--primary-d); font-weight: 700; }
+
+/* ── reaction roadmap flowchart ── */
+.roadmap-diagram {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  padding: 1rem;
+  margin: 1.2rem 0;
+  overflow-x: auto;
+}
+.roadmap-diagram svg { display: block; margin: 0 auto; min-width: 640px; }
+.rmap-node {
+  fill: var(--surface);
+  stroke: var(--line-2);
+  stroke-width: 1.4;
+}
+.rmap-node-lbl { font-family: var(--font-body); font-size: 12px; font-weight: 700; fill: var(--ink); text-anchor: middle; }
+.rmap-arrow { stroke: var(--ink-soft); stroke-width: 1.4; fill: none; }
+.rmap-reagent { font-family: var(--font-body); font-size: 10px; fill: var(--primary-d); font-weight: 600; text-anchor: middle; }
+
+/* resonance structures (mol ↔ mol) */
+.resonance-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 1.2rem 0;
+}
+.resonance-row .res-arrow {
+  font-size: 1.7rem;
+  color: var(--primary);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* directing-effects table */
+.eas-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.86rem;
+}
+.eas-table th, .eas-table td {
+  border: 1px solid var(--line);
+  padding: 0.5rem 0.7rem;
+  text-align: left;
+}
+.eas-table th { background: var(--surface-2); color: var(--ink); font-weight: 700; }
+.eas-table td { color: var(--ink-soft); }
+.eas-table .tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.5rem;
+  border-radius: 99px;
+}
+.eas-table .tag.activate { background: var(--correct-l); color: var(--correct); }
+.eas-table .tag.deactivate { background: var(--wrong-l); color: var(--wrong); }
+
 /* ── responsive ── */
 @media (max-width: 820px) {
   .review-layout { grid-template-columns: 1fr; }
