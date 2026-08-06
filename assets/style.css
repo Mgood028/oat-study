@@ -519,6 +519,21 @@ a:hover { text-decoration: underline; }
 .bd-fill { height: 100%; background: var(--primary); border-radius: 99px; }
 .breakdown-row .bd-val { flex: 0 0 90px; text-align: right; font-size: 0.85rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 
+/* accuracy tiers, used on the Progress page (and reusable anywhere else) */
+.bd-fill.bd-strong { background: var(--correct); }
+.bd-fill.bd-mid { background: var(--accent); }
+.bd-fill.bd-weak { background: var(--wrong); }
+.bd-fill.bd-untried { background: var(--line-2); }
+.breakdown-row.untried .bd-name, .breakdown-row.untried .bd-val { color: var(--muted); font-weight: 500; }
+
+/* Progress page: topic names run longer than section names, give them room */
+#progress-body .bd-name { flex-basis: 300px; }
+@media (max-width: 640px) {
+  #progress-body .breakdown-row { flex-wrap: wrap; }
+  #progress-body .bd-name { flex-basis: 100%; }
+  #progress-body .bd-val { flex-basis: auto; }
+}
+
 /* utility */
 .muted { color: var(--muted); }
 .center { text-align: center; }
@@ -625,6 +640,28 @@ a:hover { text-decoration: underline; }
 .mech-bond { stroke: var(--ink); stroke-width: 1.6; fill: none; }
 .mech-arrow { stroke: var(--primary); stroke-width: 1.8; fill: none; }
 .mech-charge { font-family: var(--font-body); font-size: 11px; fill: var(--primary-d); font-weight: 700; }
+/* chart bars / pie slices, and pedigree symbols — reuse the mech-diagram container everywhere */
+.mech-diagram .bar { fill: var(--primary); }
+.mech-diagram .bar2 { fill: var(--accent); }
+.mech-diagram .grid-line { stroke: var(--line-2); stroke-width: 1; stroke-dasharray: 2,2; }
+.mech-diagram .pie-1 { fill: var(--primary); }
+.mech-diagram .pie-2 { fill: var(--accent); }
+.mech-diagram .pie-3 { fill: var(--correct); }
+.mech-diagram .pie-4 { fill: var(--line-2); }
+.mech-diagram .ped-unaffected { fill: var(--surface); stroke: var(--ink); stroke-width: 1.6; }
+.mech-diagram .ped-affected { fill: var(--wrong); stroke: var(--ink); stroke-width: 1.6; }
+.mech-diagram .ped-line { stroke: var(--ink); stroke-width: 1.6; }
+
+/* Punnett square */
+.punnett { border-collapse: collapse; margin: 1rem auto; font-size: 0.92rem; }
+.punnett th, .punnett td {
+  border: 1px solid var(--line-2);
+  width: 44px; height: 36px;
+  text-align: center;
+  font-weight: 600;
+}
+.punnett th { background: var(--primary-l); color: var(--primary-d); }
+.punnett td { color: var(--ink); background: var(--surface); font-weight: 500; }
 
 /* ── reaction roadmap flowchart ── */
 .roadmap-diagram {

@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Practice Questions — OAT Prep</title>
+  <title>Your Progress — OAT Prep</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/style.css">
 </head>
-<body data-page="practice">
+<body data-page="progress">
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="index.html"><span class="lens"></span>OAT<b>Prep</b></a>
@@ -26,27 +26,25 @@
 
   <main class="wrap">
     <div class="page-head">
-      <div class="eyebrow">Practice &middot; Untimed</div>
-      <h1 id="practice-heading">Biology</h1>
-      <p>Answer a question to see the correct choice and a full explanation right away. This mode is for learning, not testing &mdash; take your time and read every explanation.</p>
+      <div class="eyebrow">Your Progress</div>
+      <h1 id="progress-title">Topic-by-topic accuracy</h1>
+      <p>Every question you answer in Practice or a Timed Test is recorded here, keyed by topic &mdash; the same breakdown a diagnostic score report gives you. Red means it needs another pass; green means it's solid. Saved locally in this browser only.</p>
     </div>
 
-    <div class="qbank-head">
-      <span class="pick">Section:
-        <select id="practice-picker" aria-label="Choose section"></select>
-      </span>
-      <span class="score-pill" id="practice-score"></span>
-      <span class="flex gap">
-        <button class="btn btn-sm" id="shuffle-btn">&#128256; Shuffle</button>
-        <button class="btn btn-sm btn-ghost" id="reset-btn">Reset</button>
-      </span>
+    <div class="review-nav" id="progress-switcher" style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:1.5rem;"></div>
+
+    <div class="flex between items-center wrap-gap" style="margin-bottom:1rem;">
+      <span class="muted" id="progress-summary" style="font-size:.9rem;"></span>
+      <button class="btn btn-sm btn-ghost" id="progress-reset">Reset progress</button>
     </div>
 
-    <div id="practice-questions"></div>
+    <div class="card">
+      <div id="progress-body"></div>
+    </div>
 
-    <div class="flex wrap-gap" style="margin-top:1.5rem;">
-      <a class="btn" href="review.html">&larr; Back to review notes</a>
-      <a class="btn btn-primary" href="test.html">Ready? Take a timed test &rarr;</a>
+    <div class="flex wrap-gap" style="margin-top:2rem;">
+      <a class="btn btn-primary" id="progress-cta" href="practice.html">Practice this section &rarr;</a>
+      <a class="btn" href="review.html">Back to review notes</a>
     </div>
   </main>
 
@@ -56,7 +54,6 @@
   <script src="data/physics.js"></script>
   <script src="data/reading.js"></script>
   <script src="data/quant.js"></script>
-  <script src="assets/smiles-drawer.min.js"></script>
   <script src="assets/app.js"></script>
 </body>
 </html>

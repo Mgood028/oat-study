@@ -10,14 +10,17 @@
   var C = window.OAT_CONTENT || {};
   var SECTION_ORDER = ['biology', 'genchem', 'ochem', 'physics', 'reading', 'quant'];
 
-  // Timed-test definitions. Timers are representative, not an exact replica of
-  // the real OAT clock, because these banks are smaller than the full exam.
+  // Timed-test definitions, matched to the real OAT blueprint: question counts
+  // per section and per-section timing. Each attempt draws a fresh random
+  // sample of that many questions from the bank (see startTest), so no two
+  // attempts are identical — same as walking into a real testing center.
+  var REAL_COUNTS = { biology: 40, genchem: 30, ochem: 30, physics: 40, quant: 40, reading: 50 };
   var TESTS = [
-    { id: 'ns',      name: 'Survey of Natural Sciences', sections: ['biology', 'genchem', 'ochem'], minutes: 55, note: 'Biology, General Chemistry & Organic Chemistry combined — mirrors the real first section.' },
-    { id: 'physics', name: 'Physics',                    sections: ['physics'], minutes: 20, note: 'Its own scored section on the real exam.' },
-    { id: 'quant',   name: 'Quantitative Reasoning',     sections: ['quant'],   minutes: 20, note: 'The real section is 40 questions in 45 minutes.' },
-    { id: 'reading', name: 'Reading Comprehension',      sections: ['reading'], minutes: 25, note: 'Passage-based. Every answer is supported by the text.' },
-    { id: 'full',    name: 'Full-Length Mock',           sections: ['biology', 'genchem', 'ochem', 'reading', 'physics', 'quant'], minutes: 120, note: 'All sections in exam order. Best for a dress rehearsal.' }
+    { id: 'ns',      name: 'Survey of Natural Sciences', sections: ['biology', 'genchem', 'ochem'], minutes: 90, note: 'Biology, General Chemistry & Organic Chemistry combined — 100 questions in 90 minutes, mirroring the real first section.' },
+    { id: 'physics', name: 'Physics',                    sections: ['physics'], minutes: 50, note: 'Its own scored section on the real exam — 40 questions in 50 minutes.' },
+    { id: 'quant',   name: 'Quantitative Reasoning',     sections: ['quant'],   minutes: 45, note: '40 questions in 45 minutes, matching the real exam exactly.' },
+    { id: 'reading', name: 'Reading Comprehension',      sections: ['reading'], minutes: 60, note: 'Passage-based. Every answer is supported by the text. (Bank is still growing toward the full 50-question length.)' },
+    { id: 'full',    name: 'Full-Length Mock',           sections: ['biology', 'genchem', 'ochem', 'reading', 'physics', 'quant'], minutes: 265, note: 'All sections, in exam order, at real exam length and timing — the full dress rehearsal (about 4h25m of testing time, just like test day).' }
   ];
 
   /* ---------- storage (localStorage w/ in-memory fallback) ---------- */
@@ -33,6 +36,18 @@
     }
   };
 
+  /* ---------- per-topic accuracy tracking (persists across practice + tests) ---------- */
+  // Shape: { [sectionId]: { [topic]: { correct: n, total: n } } }
+  function recordAnswer(secId, topic, correct) {
+    if (!secId || !topic) return;
+    var stats = Store.get('topic_stats', {});
+    if (!stats[secId]) stats[secId] = {};
+    if (!stats[secId][topic]) stats[secId][topic] = { correct: 0, total: 0 };
+    stats[secId][topic].total++;
+    if (correct) stats[secId][topic].correct++;
+    Store.set('topic_stats', stats);
+  }
+
   /* ---------- small helpers ---------- */
   function $(sel, root) { return (root || document).querySelector(sel); }
   function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
@@ -41,6 +56,9 @@
   function param(name) { return new URLSearchParams(location.search).get(name); }
   function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   function totalQuestions(secId) { return (C[secId] && C[secId].questions.length) || 0; }
+  // How many questions a timed test draws from a section: the real exam's
+  // count, capped by however many are actually in the bank right now.
+  function testCount(secId) { return Math.min(REAL_COUNTS[secId] || totalQuestions(secId), totalQuestions(secId)); }
   function fmtTime(s) { var m = Math.floor(s / 60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
 
   /* ---------- molecule structures (rendered from SMILES) ---------- */
@@ -304,6 +322,7 @@
 
     practiceState.done++;
     if (right) practiceState.correct++;
+    recordAnswer(practiceState.secId, q.topic, right);
     updatePracticeScore();
   }
 
@@ -328,7 +347,7 @@
     var chooser = $('#test-chooser');
     if (chooser) {
       TESTS.forEach(function (t) {
-        var qCount = t.sections.reduce(function (n, sid) { return n + totalQuestions(sid); }, 0);
+        var qCount = t.sections.reduce(function (n, sid) { return n + testCount(sid); }, 0);
         var card = el('a', 'card card-link');
         card.href = '#';
         card.innerHTML =
@@ -342,10 +361,14 @@
   }
 
   function startTest(test) {
-    // assemble questions in section order
+    // Assemble questions in section order, but draw a fresh random sample of
+    // real-exam-length size from each section's bank — never the same set
+    // or order twice, just like an actual testing session.
     var qs = [];
     test.sections.forEach(function (sid) {
-      C[sid].questions.forEach(function (q) {
+      var pool = shuffle(C[sid].questions);
+      var n = testCount(sid);
+      pool.slice(0, n).forEach(function (q) {
         qs.push({ q: q, section: sid });
       });
     });
@@ -475,7 +498,9 @@
 
     testState.items.forEach(function (item, i) {
       bySection[item.section].total++;
-      if (testState.answers[i] === item.q.answer) { correct++; bySection[item.section].correct++; }
+      var right = testState.answers[i] === item.q.answer;
+      if (right) { correct++; bySection[item.section].correct++; }
+      if (testState.answers[i] != null) recordAnswer(item.section, item.q.topic, right);
     });
 
     var pct = Math.round(correct / total * 100);
@@ -566,6 +591,80 @@
   }
 
   /* ==========================================================
+     PROGRESS (per-topic accuracy, persisted across practice + tests)
+     ========================================================== */
+  function initProgress() {
+    var secId = param('section') || 'biology';
+    if (!C[secId]) secId = 'biology';
+
+    var switcher = $('#progress-switcher');
+    if (switcher) {
+      switcher.innerHTML = '';
+      SECTION_ORDER.forEach(function (id) {
+        var a = el('a', id === secId ? 'active' : '', C[id].icon + ' ' + C[id].short);
+        a.href = 'progress.html?section=' + id;
+        switcher.appendChild(a);
+      });
+    }
+
+    $('#progress-title').textContent = C[secId].name + ' — topic-by-topic accuracy';
+    var cta = $('#progress-cta');
+    if (cta) cta.href = 'practice.html?section=' + secId;
+
+    var stats = Store.get('topic_stats', {});
+    var secStats = stats[secId] || {};
+
+    // Unique topics for this section, in first-appearance order in the bank.
+    var topics = [];
+    C[secId].questions.forEach(function (q) {
+      if (topics.indexOf(q.topic) === -1) topics.push(q.topic);
+    });
+
+    var rows = topics.map(function (t) {
+      var s = secStats[t];
+      var total = s ? s.total : 0;
+      var correct = s ? s.correct : 0;
+      return { topic: t, total: total, correct: correct, pct: total ? Math.round(correct / total * 100) : null };
+    });
+
+    var attempted = rows.filter(function (r) { return r.total > 0; }).sort(function (a, b) { return a.pct - b.pct; });
+    var untried = rows.filter(function (r) { return r.total === 0; }).sort(function (a, b) { return a.topic.localeCompare(b.topic); });
+    var ordered = attempted.concat(untried);
+
+    var totalAnswered = attempted.reduce(function (n, r) { return n + r.total; }, 0);
+    var totalCorrect = attempted.reduce(function (n, r) { return n + r.correct; }, 0);
+    var summary = $('#progress-summary');
+    if (summary) {
+      summary.textContent = totalAnswered
+        ? totalCorrect + '/' + totalAnswered + ' correct overall (' + Math.round(totalCorrect / totalAnswered * 100) + '%) · ' + attempted.length + ' of ' + topics.length + ' topics attempted'
+        : 'No questions answered yet in ' + C[secId].name + ' — head to Practice or a Timed Test to start filling this in.';
+    }
+
+    var body = $('#progress-body');
+    body.innerHTML = '';
+    ordered.forEach(function (r) {
+      var row = el('div', 'breakdown-row' + (r.total === 0 ? ' untried' : ''));
+      var tier = r.total === 0 ? 'bd-untried' : (r.pct >= 75 ? 'bd-strong' : (r.pct >= 50 ? 'bd-mid' : 'bd-weak'));
+      var valText = r.total === 0 ? 'Not attempted yet' : (r.correct + '/' + r.total + ' · ' + r.pct + '%');
+      row.innerHTML =
+        '<div class="bd-name">' + r.topic + '</div>' +
+        '<div class="bd-track"><div class="bd-fill ' + tier + '" style="width:' + (r.total ? r.pct : 0) + '%"></div></div>' +
+        '<div class="bd-val">' + valText + '</div>';
+      body.appendChild(row);
+    });
+
+    var resetBtn = $('#progress-reset');
+    if (resetBtn) {
+      resetBtn.onclick = function () {
+        if (confirm('Clear all saved topic-accuracy progress for every section? This can\'t be undone.')) {
+          Store.set('topic_stats', {});
+          initProgress();
+        }
+      };
+    }
+  }
+
+  /* ==========================================================
      BOOT
      ========================================================== */
   document.addEventListener('DOMContentLoaded', function () {
@@ -575,5 +674,6 @@
     else if (page === 'review') initReview();
     else if (page === 'practice') initPractice();
     else if (page === 'test') { initTest(); bindTestControls(); }
+    else if (page === 'progress') initProgress();
   });
 })();
