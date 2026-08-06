@@ -79,6 +79,7 @@ a:hover { text-decoration: underline; }
   font-weight: 600;
   color: var(--ink);
   letter-spacing: -0.01em;
+  flex-shrink: 0;
 }
 .brand:hover { text-decoration: none; }
 .brand .lens {
@@ -101,13 +102,22 @@ a:hover { text-decoration: underline; }
   display: flex;
   gap: 0.25rem;
   align-items: center;
+  /* Flex items default to min-width:auto, which refuses to shrink below
+     content size — with 5 links that can force the whole topbar (and page)
+     wider than the viewport instead of yielding. min-width:0 lets it actually
+     shrink, and overflow-x is a last-resort safety net if it still can't fit. */
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.nav::-webkit-scrollbar { display: none; }
 .nav a {
-  padding: 0.45rem 0.85rem;
+  padding: 0.45rem 0.7rem;
   border-radius: var(--radius-s);
   color: var(--ink-soft);
   font-size: 0.9rem;
   font-weight: 500;
+  white-space: nowrap;
 }
 .nav a:hover { background: var(--surface-2); color: var(--ink); text-decoration: none; }
 .nav a.active { background: var(--primary-l); color: var(--primary-d); }
