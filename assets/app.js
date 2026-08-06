@@ -126,6 +126,32 @@
     });
   }
 
+  /* ---------- theme (light/dark) ---------- */
+  // A tiny inline script in <head> already applies data-theme before paint
+  // (see the anti-flash snippet at the top of every page) if the user has
+  // an explicit saved preference. This just keeps the toggle button in sync
+  // and handles clicks; the CSS prefers-color-scheme media query covers
+  // everyone who's never touched the toggle.
+  function currentTheme() {
+    var explicit = document.documentElement.getAttribute('data-theme');
+    if (explicit === 'dark' || explicit === 'light') return explicit;
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    Store.set('theme', theme);
+    var btn = $('#theme-toggle');
+    if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+  }
+  function initTheme() {
+    var btn = $('#theme-toggle');
+    if (!btn) return;
+    btn.textContent = currentTheme() === 'dark' ? '☀️' : '🌙';
+    btn.addEventListener('click', function () {
+      applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+    });
+  }
+
   /* ---------- score gauge (SVG semicircle, 200–400) ---------- */
   function gaugeSVG(scaled, pct) {
     var min = 200, max = 400;
@@ -669,6 +695,7 @@
      ========================================================== */
   document.addEventListener('DOMContentLoaded', function () {
     initNav();
+    initTheme();
     var page = document.body.dataset.page;
     if (page === 'dashboard') initDashboard();
     else if (page === 'review') initReview();

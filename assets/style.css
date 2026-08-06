@@ -34,6 +34,75 @@
   --shadow:   0 1px 2px rgba(18,32,58,0.04), 0 4px 16px rgba(18,32,58,0.05);
   --shadow-l: 0 8px 32px rgba(18,32,58,0.10);
   --maxw:     1080px;
+
+  color-scheme: light;
+}
+
+/* ---------- dark theme ----------
+   Every color in the site is a custom property, so dark mode is just a
+   second set of values — no other rule in this file needs to change.
+   Applies automatically from OS/browser preference, and can be forced
+   either way via the toggle button (which sets data-theme on <html>). */
+:root[data-theme="dark"] {
+  --bg:        #0B1220;
+  --surface:   #121B2D;
+  --surface-2: #1B2A40;
+  --ink:       #EAF1F8;
+  --ink-soft:  #B7C6DA;
+  --muted:     #7C8FA8;
+  --line:      #24344A;
+  --line-2:    #33465F;
+
+  --primary:   #14B8A6;
+  --primary-d: #5EEAD4;
+  --primary-l: #0F3A38;
+  --accent:    #FBBF24;
+  --accent-l:  #3D2E0C;
+
+  --correct:   #4ADE80;
+  --correct-l: #113321;
+  --wrong:     #F87171;
+  --wrong-l:   #3B1518;
+  --flag:      #E879F9;
+
+  --shadow:   0 1px 2px rgba(0,0,0,0.4), 0 4px 20px rgba(0,0,0,0.5);
+  --shadow-l: 0 10px 40px rgba(0,0,0,0.6);
+
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:        #0B1220;
+    --surface:   #121B2D;
+    --surface-2: #1B2A40;
+    --ink:       #EAF1F8;
+    --ink-soft:  #B7C6DA;
+    --muted:     #7C8FA8;
+    --line:      #24344A;
+    --line-2:    #33465F;
+
+    --primary:   #14B8A6;
+    --primary-d: #5EEAD4;
+    --primary-l: #0F3A38;
+    --accent:    #FBBF24;
+    --accent-l:  #3D2E0C;
+
+    --correct:   #4ADE80;
+    --correct-l: #113321;
+    --wrong:     #F87171;
+    --wrong-l:   #3B1518;
+    --flag:      #E879F9;
+
+    --shadow:   0 1px 2px rgba(0,0,0,0.4), 0 4px 20px rgba(0,0,0,0.5);
+    --shadow-l: 0 10px 40px rgba(0,0,0,0.6);
+
+    color-scheme: dark;
+  }
+}
+/* One hardcoded color in the whole file (not a variable) — needs its own dark override. */
+:root[data-theme="dark"] .timer.warn { color: var(--accent); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .timer.warn { color: var(--accent); }
 }
 
 * , *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -128,6 +197,22 @@ a:hover { text-decoration: underline; }
   font-size: 1.4rem; color: var(--ink);
   cursor: pointer;
 }
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  flex-shrink: 0;
+  margin-left: 0.25rem;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--line-2);
+  background: var(--surface);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.theme-toggle:hover { background: var(--surface-2); }
 
 /* ── layout shell ── */
 .wrap {
@@ -259,6 +344,11 @@ a:hover { text-decoration: underline; }
   border-radius: var(--radius);
   padding: 0.5rem;
 }
+/* The subject switcher (#section-switcher) shares .review-nav for its look,
+   but it sits above the two-column layout, not inside it — it must NOT be
+   sticky, or it pins to the same spot as the topic sidebar below it and the
+   two collide/overlap while scrolling. ID beats class, so this wins. */
+#section-switcher { position: static; }
 .review-nav a {
   display: block;
   padding: 0.5rem 0.75rem;
