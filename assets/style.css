@@ -431,6 +431,18 @@ a:hover { text-decoration: underline; }
 }
 .score-pill .ok { color: var(--correct); }
 .score-pill .no { color: var(--wrong); }
+.set-picker { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 1rem 0 1.5rem; }
+.set-picker a {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--line-2);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 0.85rem; font-weight: 600;
+}
+.set-picker a:hover { background: var(--surface-2); text-decoration: none; color: var(--ink); }
+.set-picker a.active { background: var(--primary-l); color: var(--primary-d); border-color: var(--primary-l); }
 .pick {
   display: inline-flex; gap: 0.4rem; align-items: center;
   font-size: 0.85rem; color: var(--ink-soft);
@@ -570,6 +582,22 @@ a:hover { text-decoration: underline; }
 .timer.danger { background: var(--wrong-l); color: var(--wrong); }
 .test-progress { font-size: 0.85rem; color: var(--ink-soft); }
 
+/* ── toast (brief non-blocking notification) ── */
+.toast {
+  position: fixed; left: 50%; bottom: 24px; z-index: 999;
+  transform: translateX(-50%) translateY(16px);
+  opacity: 0; pointer-events: none;
+  padding: 0.7rem 1.2rem;
+  border-radius: var(--radius-s);
+  font-weight: 700; font-size: 0.9rem;
+  background: var(--surface-2); color: var(--ink);
+  box-shadow: var(--shadow-l);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.warn { background: var(--accent-l); color: #92600f; }
+.toast.danger { background: var(--wrong-l); color: var(--wrong); }
+
 .palette {
   display: flex; flex-wrap: wrap; gap: 0.4rem;
   margin: 1.2rem 0;
@@ -637,14 +665,16 @@ a:hover { text-decoration: underline; }
 }
 
 /* Progress page: test history rows */
+.history-item { border-bottom: 1px solid var(--line); padding-bottom: 0.3rem; margin-bottom: 0.3rem; }
+.history-item:last-child { border: none; padding-bottom: 0; margin-bottom: 0; }
 .history-row {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-  padding: 0.7rem 0; border-bottom: 1px solid var(--line);
+  padding: 0.7rem 0 0.3rem;
 }
-.history-row:last-child { border: none; }
 .hist-name { font-weight: 600; font-size: 0.9rem; }
 .hist-date { font-size: 0.8rem; margin-top: 0.1rem; }
 .hist-score { flex: 0 0 auto; text-align: right; font-size: 0.85rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.history-actions { padding: 0 0 0.6rem; }
 @media (max-width: 640px) {
   .history-row { flex-wrap: wrap; }
 }

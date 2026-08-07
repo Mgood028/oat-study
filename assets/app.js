@@ -17,6 +17,9 @@
   var REAL_COUNTS = { biology: 40, genchem: 30, ochem: 30, physics: 40, quant: 40, reading: 50 };
   var TESTS = [
     { id: 'ns',      name: 'Survey of Natural Sciences', sections: ['biology', 'genchem', 'ochem'], minutes: 90, note: 'Biology, General Chemistry & Organic Chemistry combined — 100 questions in 90 minutes, mirroring the real first section.' },
+    { id: 'biology', name: 'Biology',                    sections: ['biology'], minutes: 36, note: 'Biology on its own, pulled out of the combined Natural Sciences section — 40 questions in 36 minutes, matching that section\'s per-question pacing.' },
+    { id: 'genchem', name: 'General Chemistry',          sections: ['genchem'], minutes: 27, note: 'General Chemistry on its own, pulled out of the combined Natural Sciences section — 30 questions in 27 minutes, matching that section\'s per-question pacing.' },
+    { id: 'ochem',   name: 'Organic Chemistry',          sections: ['ochem'],   minutes: 27, note: 'Organic Chemistry on its own, pulled out of the combined Natural Sciences section — 30 questions in 27 minutes, matching that section\'s per-question pacing.' },
     { id: 'physics', name: 'Physics',                    sections: ['physics'], minutes: 50, note: 'Its own scored section on the real exam — 40 questions in 50 minutes.' },
     { id: 'quant',   name: 'Quantitative Reasoning',     sections: ['quant'],   minutes: 45, note: '40 questions in 45 minutes, matching the real exam exactly.' },
     { id: 'reading', name: 'Reading Comprehension',      sections: ['reading'], minutes: 60, note: 'Passage-based. Every answer is supported by the text. (Bank is still growing toward the full 50-question length.)' },
@@ -64,10 +67,30 @@
   function param(name) { return new URLSearchParams(location.search).get(name); }
   function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   function totalQuestions(secId) { return (C[secId] && C[secId].questions.length) || 0; }
+  // Look up a question by id within a section — used to reconstruct a saved
+  // test attempt's full review from the compact { section, qid } pairs stored
+  // in history (see logTestHistory/submitTest), against whatever the live
+  // bank currently contains.
+  function findQuestion(secId, qid) {
+    var qs = C[secId] && C[secId].questions;
+    if (!qs) return null;
+    for (var i = 0; i < qs.length; i++) { if (qs[i].id === qid) return qs[i]; }
+    return null;
+  }
   // How many questions a timed test draws from a section: the real exam's
   // count, capped by however many are actually in the bank right now.
   function testCount(secId) { return Math.min(REAL_COUNTS[secId] || totalQuestions(secId), totalQuestions(secId)); }
   function fmtTime(s) { var m = Math.floor(s / 60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
+
+  /* ---------- toast (brief non-blocking notification, e.g. timer warnings) ---------- */
+  function showToast(msg, kind) {
+    var t = $('#toast');
+    if (!t) { t = el('div', 'toast'); t.id = 'toast'; document.body.appendChild(t); }
+    clearTimeout(t._hideTimer);
+    t.textContent = msg;
+    t.className = 'toast show' + (kind ? ' ' + kind : '');
+    t._hideTimer = setTimeout(function () { t.classList.remove('show'); }, 4000);
+  }
 
   /* ---------- molecule structures (rendered from SMILES) ---------- */
   var _molDrawers = {};
@@ -460,13 +483,16 @@
   /* ==========================================================
      PRACTICE (untimed, instant explanations)
      ========================================================== */
-  var practiceState = { secId: null, order: [], answered: {}, correct: 0, done: 0 };
+  var practiceState = { secId: null, setIdx: 0, order: [], answered: {}, correct: 0, done: 0 };
+  var PRACTICE_SET_SIZE = 10;
 
   function initPractice() {
     initStudyTools();
     var secId = param('section') || 'biology';
     if (!C[secId]) secId = 'biology';
     practiceState.secId = secId;
+    var setParam = parseInt(param('set'), 10);
+    practiceState.setIdx = (setParam >= 1) ? setParam - 1 : 0;
 
     // build section picker
     var picker = $('#practice-picker');
@@ -485,21 +511,36 @@
 
   function renderPractice(doShuffle) {
     var s = C[practiceState.secId];
-    var ids = s.questions.map(function (q, i) { return i; });
-    practiceState.order = doShuffle ? shuffle(ids) : ids;
+    var totalSets = Math.max(1, Math.ceil(s.questions.length / PRACTICE_SET_SIZE));
+    if (practiceState.setIdx >= totalSets) practiceState.setIdx = totalSets - 1;
+    if (practiceState.setIdx < 0) practiceState.setIdx = 0;
+
+    // Sets are fixed, stable chunks of the bank in bank order — Shuffle only
+    // reorders questions within the current set, it never changes which
+    // questions belong to which set.
+    var allIds = s.questions.map(function (q, i) { return i; });
+    var start = practiceState.setIdx * PRACTICE_SET_SIZE;
+    var chunkIds = allIds.slice(start, start + PRACTICE_SET_SIZE);
+    practiceState.order = doShuffle ? shuffle(chunkIds) : chunkIds;
     practiceState.answered = {};
     practiceState.correct = 0;
     practiceState.done = 0;
 
-    $('#practice-heading').textContent = s.name;
+    $('#practice-heading').textContent = s.name + (totalSets > 1 ? ' — Set ' + (practiceState.setIdx + 1) + ' of ' + totalSets : '');
+    renderSetPicker(practiceState.secId, totalSets);
     updatePracticeScore();
 
     var wrap = $('#practice-questions');
     wrap.innerHTML = '';
 
-    // reading: show passages up top so questions have context
+    // reading: show only the passage(s) this set's questions actually reference
     if (s.passages) {
-      s.passages.forEach(function (p) {
+      var neededPassages = {};
+      practiceState.order.forEach(function (qi) {
+        var q = s.questions[qi];
+        if (q.passageId) neededPassages[q.passageId] = true;
+      });
+      s.passages.filter(function (p) { return neededPassages[p.id]; }).forEach(function (p) {
         var panel = el('div', 'passage');
         panel.innerHTML = '<h3>' + p.title + '</h3>' + p.html;
         wrap.appendChild(panel);
@@ -510,6 +551,19 @@
       wrap.appendChild(buildPracticeCard(s.questions[qi], displayIdx + 1));
     });
     renderMolecules(wrap);
+  }
+
+  function renderSetPicker(secId, totalSets) {
+    var host = $('#set-picker');
+    if (!host) return;
+    host.innerHTML = '';
+    if (totalSets <= 1) { host.classList.add('hidden'); return; }
+    host.classList.remove('hidden');
+    for (var i = 0; i < totalSets; i++) {
+      var a = el('a', i === practiceState.setIdx ? 'active' : '', 'Set ' + (i + 1));
+      a.href = 'practice.html?section=' + secId + '&set=' + (i + 1);
+      host.appendChild(a);
+    }
   }
 
   function buildPracticeCard(q, num) {
@@ -554,13 +608,12 @@
   }
 
   function updatePracticeScore() {
-    var s = C[practiceState.secId];
     var pill = $('#practice-score');
     if (!pill) return;
     var pct = practiceState.done ? Math.round(practiceState.correct / practiceState.done * 100) : 0;
     pill.innerHTML =
       '<span class="ok">' + practiceState.correct + '</span> / ' + practiceState.done +
-      ' correct · <span class="muted">' + practiceState.done + ' of ' + s.questions.length + ' done</span>' +
+      ' correct · <span class="muted">' + practiceState.done + ' of ' + practiceState.order.length + ' done</span>' +
       (practiceState.done ? ' · ' + pct + '%' : '');
   }
 
@@ -630,6 +683,8 @@
     testTimer = setInterval(function () {
       testState.remaining--;
       updateTimerDisplay();
+      if (testState.remaining === 900) showToast('⏱ 15 minutes remaining', 'warn');
+      if (testState.remaining === 300) showToast('⏱ 5 minutes remaining', 'danger');
       if (testState.remaining <= 0) { clearInterval(testTimer); submitTest(true); }
     }, 1000);
   }
@@ -744,7 +799,11 @@
       }
     }
 
-    // log every attempt (any test type) to history for the Progress page
+    // log every attempt (any test type) to history for the Progress page —
+    // items store just the section + question id + given answer, so a past
+    // attempt can be fully reconstructed and reviewed later against the
+    // live question bank (see findQuestion/buildHistoryReview) without
+    // duplicating whole question objects into localStorage.
     logTestHistory({
       id: Date.now() + '-' + Math.random().toString(36).slice(2),
       testId: testState.test.id,
@@ -755,7 +814,10 @@
       pct: pct,
       scaled: scaled,
       bySection: bySection,
-      timedOut: !!timedOut
+      timedOut: !!timedOut,
+      items: testState.items.map(function (item, i) {
+        return { section: item.section, qid: item.q.id, chosen: testState.answers[i], flagged: testState.flags[i] };
+      })
     });
 
     renderResults(correct, total, pct, scaled, bySection, timedOut);
@@ -805,32 +867,57 @@
     window.scrollTo(0, 0);
   }
 
+  // One question's review card: stem, options colored correct/wrong, verdict
+  // line, full explanation. Shared by the just-finished results screen
+  // (buildAnswerReview, live testState) and a reopened past attempt
+  // (buildHistoryReview, reconstructed from saved history).
+  function buildQuestionReviewCard(i, sectionId, q, chosen) {
+    var right = chosen === q.answer;
+    var card = el('div', 'question');
+    card.innerHTML =
+      '<div class="q-meta"><span class="q-num">Q' + (i + 1) + '</span>' +
+      '<span class="q-topic">' + C[sectionId].short + ' · ' + q.topic + '</span></div>' +
+      (q.passageTitle ? '<div class="q-stem"><span class="passage-ref">(' + q.passageTitle + ')</span><br>' + q.stem + '</div>' : '<div class="q-stem">' + q.stem + '</div>') + stemMolHTML(q);
+    var opts = el('div', 'options');
+    q.options.forEach(function (text, oi) {
+      var b = el('button', q.optionSmiles ? 'option opt-mol-btn' : 'option'); b.disabled = true;
+      b.innerHTML = optionInnerHTML(q, oi);
+      if (oi === q.answer) b.classList.add('correct');
+      if (oi === chosen && !right) b.classList.add('wrong');
+      opts.appendChild(b);
+    });
+    card.appendChild(opts);
+    var exp = el('div', 'explanation show');
+    exp.innerHTML =
+      '<div class="verdict-line"><span class="verdict ' + (right ? 'ok' : 'no') + '">' +
+      (chosen == null ? 'Left blank.' : (right ? 'Correct.' : 'You chose ' + letter(chosen) + '.')) +
+      ' Answer: ' + letter(q.answer) + '.</span></div>' +
+      '<div class="exp-body">' + q.explanation + '</div>';
+    card.appendChild(exp);
+    return card;
+  }
+
   function buildAnswerReview(host) {
     host.innerHTML = '<h3 style="font-family:var(--font-display);font-size:1.3rem;margin-bottom:1rem;">Answer review</h3>';
     testState.items.forEach(function (item, i) {
-      var q = item.q, chosen = testState.answers[i], right = chosen === q.answer;
-      var card = el('div', 'question');
-      card.innerHTML =
-        '<div class="q-meta"><span class="q-num">Q' + (i + 1) + '</span>' +
-        '<span class="q-topic">' + C[item.section].short + ' · ' + q.topic + '</span></div>' +
-        (q.passageTitle ? '<div class="q-stem"><span class="passage-ref">(' + q.passageTitle + ')</span><br>' + q.stem + '</div>' : '<div class="q-stem">' + q.stem + '</div>') + stemMolHTML(q);
-      var opts = el('div', 'options');
-      q.options.forEach(function (text, oi) {
-        var b = el('button', q.optionSmiles ? 'option opt-mol-btn' : 'option'); b.disabled = true;
-        b.innerHTML = optionInnerHTML(q, oi);
-        if (oi === q.answer) b.classList.add('correct');
-        if (oi === chosen && !right) b.classList.add('wrong');
-        opts.appendChild(b);
-      });
-      card.appendChild(opts);
-      var exp = el('div', 'explanation show');
-      exp.innerHTML =
-        '<div class="verdict-line"><span class="verdict ' + (right ? 'ok' : 'no') + '">' +
-        (chosen == null ? 'Left blank.' : (right ? 'Correct.' : 'You chose ' + letter(chosen) + '.')) +
-        ' Answer: ' + letter(q.answer) + '.</span></div>' +
-        '<div class="exp-body">' + q.explanation + '</div>';
-      card.appendChild(exp);
-      host.appendChild(card);
+      host.appendChild(buildQuestionReviewCard(i, item.section, item.q, testState.answers[i]));
+    });
+    renderMolecules(host);
+  }
+
+  // Reopen a saved test attempt (from Progress → Test history) and rebuild
+  // its full answer review against the live question bank.
+  function buildHistoryReview(host, attempt) {
+    host.innerHTML = '';
+    (attempt.items || []).forEach(function (item, i) {
+      var q = findQuestion(item.section, item.qid);
+      if (!q) {
+        var missing = el('p', 'muted', 'Question ' + (i + 1) + ' is no longer in the question bank.');
+        missing.style.fontSize = '.85rem';
+        host.appendChild(missing);
+        return;
+      }
+      host.appendChild(buildQuestionReviewCard(i, item.section, q, item.chosen));
     });
     renderMolecules(host);
   }
@@ -931,6 +1018,7 @@
       return;
     }
     hist.forEach(function (h) {
+      var item = el('div', 'history-item');
       var row = el('div', 'history-row');
       var d = new Date(h.date);
       var dateStr = isNaN(d.getTime()) ? '' :
@@ -942,7 +1030,28 @@
           '<div class="hist-date muted">' + dateStr + '</div>' +
         '</div>' +
         '<div class="hist-score">' + h.correct + '/' + h.total + ' · ' + h.pct + '% · ≈' + h.scaled + '</div>';
-      host.appendChild(row);
+      item.appendChild(row);
+
+      // Older entries logged before per-question saving existed won't have
+      // `items` — just show the summary row for those, same as before.
+      if (h.items && h.items.length) {
+        var actions = el('div', 'history-actions');
+        var btn = el('button', 'btn btn-sm btn-ghost', 'Review answers');
+        actions.appendChild(btn);
+        item.appendChild(actions);
+
+        var panel = el('div', 'hidden');
+        item.appendChild(panel);
+
+        btn.addEventListener('click', function () {
+          var opening = panel.classList.contains('hidden');
+          panel.classList.toggle('hidden');
+          btn.textContent = opening ? 'Hide review' : 'Review answers';
+          if (opening && !panel.dataset.built) { buildHistoryReview(panel, h); panel.dataset.built = '1'; }
+        });
+      }
+
+      host.appendChild(item);
     });
   }
 
