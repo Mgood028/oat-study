@@ -48,6 +48,14 @@
     Store.set('topic_stats', stats);
   }
 
+  /* ---------- test attempt history (every timed test submission, newest first) ---------- */
+  function logTestHistory(entry) {
+    var hist = Store.get('test_history', []);
+    hist.unshift(entry);
+    if (hist.length > 50) hist = hist.slice(0, 50);
+    Store.set('test_history', hist);
+  }
+
   /* ---------- small helpers ---------- */
   function $(sel, root) { return (root || document).querySelector(sel); }
   function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
@@ -84,7 +92,16 @@
       elm.insertBefore(svg, elm.firstChild);
       try {
         window.SmilesDrawer.parse(smi, function (tree) {
-          try { drawer.draw(tree, svg, 'light'); }
+          try {
+            drawer.draw(tree, svg, 'light');
+            // SmilesDrawer sets width/height to the molecule's raw computed
+            // extent (can be far larger than the requested canvas for big
+            // structures), so force it back to the box we actually asked
+            // for — the viewBox it just set keeps the drawing centered and
+            // proportional as it scales down.
+            svg.setAttribute('width', w);
+            svg.setAttribute('height', h);
+          }
           catch (e) { svg.remove(); }
         }, function () { svg.remove(); });
       } catch (e) { svg.remove(); }
@@ -177,6 +194,189 @@
   }
 
   /* ==========================================================
+     STUDY TOOLS — calculator, periodic table, notes.
+     Mounted into #study-tools on the Practice and Timed Test
+     pages (see initPractice()/initTest() below).
+     ========================================================== */
+  function initStudyTools() {
+    var mount = $('#study-tools');
+    if (!mount || mount.dataset.built) return;
+    mount.dataset.built = '1';
+
+    mount.innerHTML =
+      '<div class="tools-bar">' +
+        '<button class="tools-btn" data-tool="calc" type="button">🖩 Calculator</button>' +
+        '<button class="tools-btn" data-tool="ptable" type="button">⚛️ Periodic Table</button>' +
+        '<button class="tools-btn" data-tool="notes" type="button">📝 Notes</button>' +
+      '</div>' +
+      '<div class="tool-panel" id="tool-panel-calc" hidden></div>' +
+      '<div class="tool-panel" id="tool-panel-ptable" hidden></div>' +
+      '<div class="tool-panel" id="tool-panel-notes" hidden></div>';
+
+    buildCalcPanel($('#tool-panel-calc'));
+    buildPtablePanel($('#tool-panel-ptable'));
+    buildNotesPanel($('#tool-panel-notes'));
+
+    $$('.tools-btn', mount).forEach(function (btn) {
+      btn.addEventListener('click', function () { toggleTool(mount, btn.getAttribute('data-tool')); });
+    });
+    $$('.tool-close', mount).forEach(function (btn) {
+      btn.addEventListener('click', function () { closeAllTools(mount); });
+    });
+  }
+
+  function toggleTool(mount, tool) {
+    var panel = $('#tool-panel-' + tool, mount);
+    var btn = $('.tools-btn[data-tool="' + tool + '"]', mount);
+    var opening = panel.hidden;
+    closeAllTools(mount);
+    if (opening) { panel.hidden = false; btn.classList.add('active'); }
+  }
+  function closeAllTools(mount) {
+    $$('.tool-panel', mount).forEach(function (p) { p.hidden = true; });
+    $$('.tools-btn', mount).forEach(function (b) { b.classList.remove('active'); });
+  }
+
+  /* ---------- calculator (basic 4-function, matches the real OAT's on-screen calc) ---------- */
+  function calcFmt(n) {
+    if (!isFinite(n)) return 'Error';
+    if (Math.abs(n) < 1e-12) n = 0;
+    var s = n.toPrecision(12);
+    if (s.indexOf('e') !== -1) return String(Number(s));
+    if (s.indexOf('.') !== -1) s = s.replace(/0+$/, '').replace(/\.$/, '');
+    return s;
+  }
+  function buildCalcPanel(panel) {
+    var st = { display: '0', stored: null, op: null, memory: 0, overwrite: true };
+    var KEYS = [
+      ['MC', 'MR', 'M+', 'M-'],
+      ['C', 'CE', 'DEL', '÷'],
+      ['7', '8', '9', '×'],
+      ['4', '5', '6', '−'],
+      ['1', '2', '3', '+'],
+      ['√', '±', '0', '.']
+    ];
+    panel.innerHTML =
+      '<div class="tool-panel-head"><span>Calculator</span><button class="tool-close" type="button">&times;</button></div>' +
+      '<div class="calc-display" id="calc-display">0</div>' +
+      '<div class="calc-grid">' +
+        KEYS.map(function (row) {
+          return row.map(function (k) { return '<button class="calc-key" data-key="' + k + '" type="button">' + k + '</button>'; }).join('');
+        }).join('') +
+        '<button class="calc-key calc-eq" data-key="=" type="button">=</button>' +
+      '</div>';
+
+    function render() { $('#calc-display', panel).textContent = st.display; }
+
+    function compute(a, b, op) {
+      if (op === '+') return a + b;
+      if (op === '−') return a - b;
+      if (op === '×') return a * b;
+      if (op === '÷') return b === 0 ? NaN : a / b;
+      return b;
+    }
+    function pressDigit(d) {
+      if (st.display === 'Error') { st.display = '0'; st.overwrite = true; }
+      if (st.overwrite) { st.display = (d === '.') ? '0.' : d; st.overwrite = false; }
+      else if (d === '.') { if (st.display.indexOf('.') === -1) st.display += '.'; }
+      else { st.display = (st.display === '0') ? d : st.display + d; }
+    }
+    function pressOp(op) {
+      if (st.display === 'Error') return;
+      if (st.op && !st.overwrite) st.stored = compute(st.stored, parseFloat(st.display), st.op);
+      else st.stored = parseFloat(st.display);
+      st.op = op;
+      st.display = calcFmt(st.stored);
+      st.overwrite = true;
+    }
+    function pressEquals() {
+      if (st.op == null || st.display === 'Error') return;
+      var result = compute(st.stored, parseFloat(st.display), st.op);
+      st.display = calcFmt(result);
+      st.stored = null;
+      st.op = null;
+      st.overwrite = true;
+    }
+    function pressKey(k) {
+      if (/^[0-9.]$/.test(k)) { pressDigit(k); }
+      else if (k === '+' || k === '−' || k === '×' || k === '÷') { pressOp(k); }
+      else if (k === '=') { pressEquals(); }
+      else if (k === 'C') { st = { display: '0', stored: null, op: null, memory: st.memory, overwrite: true }; }
+      else if (k === 'CE') { st.display = '0'; st.overwrite = true; }
+      else if (k === 'DEL') {
+        if (!st.overwrite && st.display.length > 1) st.display = st.display.slice(0, -1);
+        else st.display = '0';
+        if (st.display === '-') st.display = '0';
+      }
+      else if (k === '±') { if (st.display !== '0') st.display = st.display.charAt(0) === '-' ? st.display.slice(1) : '-' + st.display; }
+      else if (k === '√') {
+        var v = parseFloat(st.display);
+        st.display = v < 0 ? 'Error' : calcFmt(Math.sqrt(v));
+        st.overwrite = true;
+      }
+      else if (k === 'M+') { st.memory += parseFloat(st.display) || 0; st.overwrite = true; }
+      else if (k === 'M-') { st.memory -= parseFloat(st.display) || 0; st.overwrite = true; }
+      else if (k === 'MR') { st.display = calcFmt(st.memory); st.overwrite = true; }
+      else if (k === 'MC') { st.memory = 0; }
+      render();
+    }
+    panel.addEventListener('click', function (e) {
+      var btn = e.target.closest && e.target.closest('.calc-key');
+      if (btn) pressKey(btn.getAttribute('data-key'));
+    });
+  }
+
+  /* ---------- periodic table (reference only — data/periodic-table.js) ---------- */
+  function buildPtablePanel(panel) {
+    var els = window.OAT_ELEMENTS || [];
+    var main = els.filter(function (e) { return e.pos; });
+    var lan = els.filter(function (e) { return e.cat === 'lanthanide'; });
+    var act = els.filter(function (e) { return e.cat === 'actinide'; });
+
+    function cellHTML(e, withPos) {
+      var style = withPos ? ' style="grid-row:' + e.pos[0] + ';grid-column:' + e.pos[1] + ';"' : '';
+      return '<button class="pt-cell cat-' + e.cat + '" data-num="' + e.num + '"' + style + '>' +
+        '<span class="pt-num">' + e.num + '</span><span class="pt-sym">' + e.sym + '</span></button>';
+    }
+
+    panel.innerHTML =
+      '<div class="tool-panel-head"><span>Periodic Table</span><button class="tool-close" type="button">&times;</button></div>' +
+      '<div class="pt-detail" id="pt-detail">Click an element for its name, number, and atomic mass.</div>' +
+      '<div class="pt-scroll">' +
+        '<div class="pt-grid">' + main.map(function (e) { return cellHTML(e, true); }).join('') + '</div>' +
+        '<div class="pt-fblock">' + lan.map(function (e) { return cellHTML(e, false); }).join('') + '</div>' +
+        '<div class="pt-fblock">' + act.map(function (e) { return cellHTML(e, false); }).join('') + '</div>' +
+      '</div>';
+
+    panel.addEventListener('click', function (e) {
+      var btn = e.target.closest && e.target.closest('.pt-cell');
+      if (!btn) return;
+      var num = parseInt(btn.getAttribute('data-num'), 10);
+      var elm = els.filter(function (x) { return x.num === num; })[0];
+      if (!elm) return;
+      $('#pt-detail', panel).innerHTML = '<strong>' + elm.num + ' &middot; ' + elm.sym + '</strong> — ' + elm.name + ' &middot; ' + elm.mass + ' amu';
+    });
+  }
+
+  /* ---------- notes (persisted scratchpad, shared across practice + tests) ---------- */
+  function buildNotesPanel(panel) {
+    panel.innerHTML =
+      '<div class="tool-panel-head"><span>Notes</span><button class="tool-close" type="button">&times;</button></div>' +
+      '<div class="notes-body"></div>' +
+      '<div class="notes-foot"><span class="muted" style="font-size:.75rem;">Saved automatically in this browser</span><button class="btn btn-sm btn-ghost" id="notes-clear" type="button">Clear</button></div>';
+
+    var ta = el('textarea', 'notes-area');
+    ta.placeholder = 'Scratch space — work through problems, jot notes, eliminate answers.';
+    ta.value = Store.get('scratch_notes', '');
+    ta.addEventListener('input', function () { Store.set('scratch_notes', ta.value); });
+    $('.notes-body', panel).appendChild(ta);
+
+    $('#notes-clear', panel).addEventListener('click', function () {
+      if (confirm('Clear your notes? This can\'t be undone.')) { ta.value = ''; Store.set('scratch_notes', ''); }
+    });
+  }
+
+  /* ==========================================================
      DASHBOARD
      ========================================================== */
   function initDashboard() {
@@ -263,6 +463,7 @@
   var practiceState = { secId: null, order: [], answered: {}, correct: 0, done: 0 };
 
   function initPractice() {
+    initStudyTools();
     var secId = param('section') || 'biology';
     if (!C[secId]) secId = 'biology';
     practiceState.secId = secId;
@@ -342,8 +543,8 @@
     });
     var right = chosen === q.answer;
     exp.innerHTML =
-      '<span class="verdict ' + (right ? 'ok' : 'no') + '">' + (right ? 'Correct.' : 'Not quite — the answer is ' + letter(q.answer) + '.') + '</span> ' +
-      q.explanation;
+      '<div class="verdict-line"><span class="verdict ' + (right ? 'ok' : 'no') + '">' + (right ? 'Correct.' : 'Not quite — the answer is ' + letter(q.answer) + '.') + '</span></div>' +
+      '<div class="exp-body">' + q.explanation + '</div>';
     exp.classList.add('show');
 
     practiceState.done++;
@@ -413,6 +614,9 @@
     $('#test-runner').classList.remove('hidden');
     var bar = $('#test-bar-wrap'); if (bar) bar.classList.remove('hidden');
     $('#test-name').textContent = test.name;
+
+    var tools = $('#study-tools');
+    if (tools) { tools.hidden = false; initStudyTools(); }
 
     renderPalette();
     renderTestQuestion();
@@ -540,6 +744,20 @@
       }
     }
 
+    // log every attempt (any test type) to history for the Progress page
+    logTestHistory({
+      id: Date.now() + '-' + Math.random().toString(36).slice(2),
+      testId: testState.test.id,
+      testName: testState.test.name,
+      date: new Date().toISOString(),
+      correct: correct,
+      total: total,
+      pct: pct,
+      scaled: scaled,
+      bySection: bySection,
+      timedOut: !!timedOut
+    });
+
     renderResults(correct, total, pct, scaled, bySection, timedOut);
   }
 
@@ -607,9 +825,10 @@
       card.appendChild(opts);
       var exp = el('div', 'explanation show');
       exp.innerHTML =
-        '<span class="verdict ' + (right ? 'ok' : 'no') + '">' +
+        '<div class="verdict-line"><span class="verdict ' + (right ? 'ok' : 'no') + '">' +
         (chosen == null ? 'Left blank.' : (right ? 'Correct.' : 'You chose ' + letter(chosen) + '.')) +
-        ' Answer: ' + letter(q.answer) + '.</span> ' + q.explanation;
+        ' Answer: ' + letter(q.answer) + '.</span></div>' +
+        '<div class="exp-body">' + q.explanation + '</div>';
       card.appendChild(exp);
       host.appendChild(card);
     });
@@ -679,15 +898,52 @@
       body.appendChild(row);
     });
 
+    renderHistory();
+
     var resetBtn = $('#progress-reset');
     if (resetBtn) {
       resetBtn.onclick = function () {
-        if (confirm('Clear all saved topic-accuracy progress for every section? This can\'t be undone.')) {
+        if (confirm('Clear all saved progress — topic accuracy and test history — for every section? This can\'t be undone.')) {
           Store.set('topic_stats', {});
+          Store.set('test_history', []);
           initProgress();
         }
       };
     }
+  }
+
+  // Every logged timed-test attempt, newest first — independent of the section switcher above.
+  function renderHistory() {
+    var host = $('#history-body');
+    if (!host) return;
+    var hist = Store.get('test_history', []);
+
+    var summary = $('#history-summary');
+    if (summary) {
+      summary.textContent = hist.length
+        ? hist.length + ' test' + (hist.length === 1 ? '' : 's') + ' logged'
+        : 'No tests taken yet — every Timed Test you submit will show up here.';
+    }
+
+    host.innerHTML = '';
+    if (!hist.length) {
+      host.innerHTML = '<p class="muted" style="font-size:.9rem;">Take a Timed Test to start building a score history.</p>';
+      return;
+    }
+    hist.forEach(function (h) {
+      var row = el('div', 'history-row');
+      var d = new Date(h.date);
+      var dateStr = isNaN(d.getTime()) ? '' :
+        d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' +
+        d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+      row.innerHTML =
+        '<div class="hist-main">' +
+          '<div class="hist-name">' + h.testName + (h.timedOut ? ' <span class="section-tag" style="margin-left:.4rem;">time expired</span>' : '') + '</div>' +
+          '<div class="hist-date muted">' + dateStr + '</div>' +
+        '</div>' +
+        '<div class="hist-score">' + h.correct + '/' + h.total + ' · ' + h.pct + '% · ≈' + h.scaled + '</div>';
+      host.appendChild(row);
+    });
   }
 
   /* ==========================================================

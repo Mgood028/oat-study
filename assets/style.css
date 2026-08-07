@@ -521,9 +521,11 @@ a:hover { text-decoration: underline; }
 }
 .explanation.show { display: block; }
 .explanation strong { color: var(--ink); }
+.explanation .verdict-line { display: block; margin-bottom: 0.5rem; }
 .explanation .verdict { font-weight: 700; }
 .explanation .verdict.ok { color: var(--correct); }
 .explanation .verdict.no { color: var(--wrong); }
+.explanation .exp-body { display: block; }
 
 /* passage panel */
 .passage {
@@ -634,6 +636,19 @@ a:hover { text-decoration: underline; }
   #progress-body .bd-val { flex-basis: auto; }
 }
 
+/* Progress page: test history rows */
+.history-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 0.7rem 0; border-bottom: 1px solid var(--line);
+}
+.history-row:last-child { border: none; }
+.hist-name { font-weight: 600; font-size: 0.9rem; }
+.hist-date { font-size: 0.8rem; margin-top: 0.1rem; }
+.hist-score { flex: 0 0 auto; text-align: right; font-size: 0.85rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 640px) {
+  .history-row { flex-wrap: wrap; }
+}
+
 /* utility */
 .muted { color: var(--muted); }
 .center { text-align: center; }
@@ -676,6 +691,7 @@ a:hover { text-decoration: underline; }
   display: inline-block;
   margin: 0.2rem auto 1rem;
   min-width: 200px;
+  max-width: 320px;
 }
 .q-mol-wrap { text-align: center; }
 /* molecule shown as an answer option */
@@ -684,6 +700,7 @@ a:hover { text-decoration: underline; }
   border: none;
   padding: 0;
   flex: 1;
+  max-width: 160px;
 }
 .option.opt-mol-btn { align-items: center; }
 .mol-err { color: var(--muted); font-size: 0.8rem; font-style: italic; }
@@ -728,7 +745,7 @@ a:hover { text-decoration: underline; }
   margin: 1.2rem 0;
   overflow-x: auto;
 }
-.mech-diagram svg { display: block; margin: 0 auto; min-width: 420px; }
+.mech-diagram svg { display: block; margin: 0 auto; min-width: 420px; max-width: 520px; width: auto; }
 .mech-diagram .mech-cap {
   text-align: center;
   font-size: 0.78rem;
@@ -772,7 +789,7 @@ a:hover { text-decoration: underline; }
   margin: 1.2rem 0;
   overflow-x: auto;
 }
-.roadmap-diagram svg { display: block; margin: 0 auto; min-width: 640px; }
+.roadmap-diagram svg { display: block; margin: 0 auto; min-width: 640px; max-width: 1030px; width: auto; }
 .rmap-node {
   fill: var(--surface);
   stroke: var(--line-2);
@@ -821,6 +838,118 @@ a:hover { text-decoration: underline; }
 }
 .eas-table .tag.activate { background: var(--correct-l); color: var(--correct); }
 .eas-table .tag.deactivate { background: var(--wrong-l); color: var(--wrong); }
+
+/* ── study tools: calculator / periodic table / notes ── */
+.tools-bar {
+  position: fixed; right: 1.2rem; bottom: 1.2rem; z-index: 60;
+  display: flex; flex-direction: column; gap: 0.5rem;
+  align-items: flex-end;
+}
+.tools-btn {
+  font-family: var(--font-body); font-size: 0.85rem; font-weight: 600;
+  color: var(--ink-soft); background: var(--surface);
+  border: 1px solid var(--line-2); border-radius: 99px;
+  padding: 0.55rem 1rem; box-shadow: var(--shadow-l);
+  cursor: pointer; white-space: nowrap;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.tools-btn:hover { border-color: var(--primary); color: var(--primary-d); }
+.tools-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+.tool-panel {
+  position: fixed; right: 1.2rem; bottom: 4.6rem; z-index: 61;
+  width: 320px; max-width: calc(100vw - 2.4rem); max-height: 70vh;
+  background: var(--surface); border: 1px solid var(--line-2);
+  border-radius: var(--radius); box-shadow: var(--shadow-l);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.tool-panel[hidden] { display: none; }
+#tool-panel-ptable { width: 540px; }
+.tool-panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--line);
+  font-family: var(--font-display); font-size: 1.02rem; font-weight: 600; color: var(--ink);
+  flex-shrink: 0;
+}
+.tool-close {
+  border: none; background: none; cursor: pointer; color: var(--muted);
+  font-size: 1.3rem; line-height: 1; padding: 0 0.2rem;
+}
+.tool-close:hover { color: var(--ink); }
+
+/* calculator */
+.calc-display {
+  margin: 0.8rem 0.9rem 0; padding: 0.7rem 0.8rem;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  font-family: var(--font-body); font-size: 1.5rem; font-weight: 600; color: var(--ink);
+  text-align: right; overflow-x: auto; white-space: nowrap;
+}
+.calc-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.45rem;
+  padding: 0.8rem 0.9rem 0.9rem;
+}
+.calc-key {
+  padding: 0.65rem 0; border: 1px solid var(--line-2); border-radius: var(--radius-s);
+  background: var(--surface); color: var(--ink); font-family: var(--font-body);
+  font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  transition: border-color 0.1s, background 0.1s;
+}
+.calc-key:hover { border-color: var(--primary); background: var(--primary-l); }
+.calc-key.calc-eq { grid-column: span 4; background: var(--primary); border-color: var(--primary); color: #fff; }
+.calc-key.calc-eq:hover { background: var(--primary-d); }
+
+/* periodic table */
+.pt-detail {
+  margin: 0.8rem 0.9rem 0; padding: 0.6rem 0.75rem;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-s);
+  font-size: 0.85rem; color: var(--ink-soft); min-height: 2.4em;
+}
+.pt-detail strong { color: var(--ink); }
+.pt-scroll { overflow: auto; padding: 0.8rem 0.9rem 0.9rem; }
+.pt-grid { display: grid; grid-template-columns: repeat(18, 26px); grid-auto-rows: 26px; gap: 2px; }
+.pt-fblock { display: grid; grid-template-columns: repeat(15, 26px); grid-auto-rows: 26px; gap: 2px; margin-top: 6px; }
+.pt-cell {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: none; border-radius: 3px; cursor: pointer; padding: 0;
+  color: #12203A; line-height: 1; transition: transform 0.08s;
+}
+.pt-cell:hover { transform: scale(1.18); position: relative; z-index: 2; box-shadow: var(--shadow-l); }
+.pt-cell .pt-num { font-size: 6px; font-weight: 600; opacity: 0.75; }
+.pt-cell .pt-sym { font-size: 11px; font-weight: 700; }
+/* fixed category palette — intentionally not theme-linked, like a printed reference chart */
+.pt-cell.cat-alkali          { background: #F6C9C0; }
+.pt-cell.cat-alkaline-earth  { background: #F7DDB8; }
+.pt-cell.cat-transition      { background: #F5EAAE; }
+.pt-cell.cat-lanthanide      { background: #D6E7B9; }
+.pt-cell.cat-actinide        { background: #C3E4D4; }
+.pt-cell.cat-metal           { background: #BFE1E4; }
+.pt-cell.cat-metalloid       { background: #C2D9EF; }
+.pt-cell.cat-nonmetal        { background: #CFD3F2; }
+.pt-cell.cat-halogen         { background: #E1C7EC; }
+.pt-cell.cat-noble-gas       { background: #F0C6DE; }
+
+/* notes */
+.notes-body { padding: 0.8rem 0.9rem 0; flex: 1; display: flex; min-height: 160px; }
+.notes-area {
+  width: 100%; min-height: 160px; resize: vertical;
+  border: 1px solid var(--line-2); border-radius: var(--radius-s);
+  background: var(--surface-2); color: var(--ink);
+  font-family: var(--font-body); font-size: 0.9rem; line-height: 1.5;
+  padding: 0.65rem 0.75rem;
+}
+.notes-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.7rem 0.9rem 0.9rem; gap: 0.6rem; flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .tools-bar { right: 0.7rem; bottom: 0.7rem; }
+  .tools-btn { padding: 0.5rem 0.8rem; font-size: 0.8rem; }
+  .tool-panel { right: 0.7rem; left: 0.7rem; width: auto; bottom: 4.1rem; }
+  .pt-grid { grid-template-columns: repeat(18, 22px); grid-auto-rows: 22px; }
+  .pt-fblock { grid-template-columns: repeat(15, 22px); grid-auto-rows: 22px; }
+}
 
 /* ── responsive ── */
 @media (max-width: 820px) {
