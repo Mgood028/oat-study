@@ -67,20 +67,80 @@
   function param(name) { return new URLSearchParams(location.search).get(name); }
   function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   function totalQuestions(secId) { return (C[secId] && C[secId].questions.length) || 0; }
+
+  /* ---------- practice vs. exam pools ----------
+     Practice drills the `questions` bank with instant explanations, so by the
+     time you sit a timed test those items are memorized and the score is
+     meaningless. Timed tests therefore pull from a separate `examQuestions`
+     bank the learner has never been shown. Sections that don't define one yet
+     fall back to the practice bank so nothing breaks. */
+  // Split a section into the unseen exam items and the practice items not
+  // duplicated there. A timed test fills from `exam` first and only tops up
+  // from `rest` if the exam bank is still too small to reach real exam length
+  // — so a partially-built exam bank improves a test without shortening it.
+  function testPool(secId) {
+    var s = C[secId];
+    if (!s) return { exam: [], rest: [] };
+    var exam = (s.examQuestions || []).slice();
+    var seen = {};
+    exam.forEach(function (q) { seen[q.id] = 1; });
+    var rest = (s.questions || []).filter(function (q) { return !seen[q.id]; });
+    return { exam: exam, rest: rest };
+  }
+  function examBank(secId) {
+    var p = testPool(secId);
+    return p.exam.concat(p.rest);
+  }
+  function examCount(secId) { return examBank(secId).length; }
+  function hasOwnExamBank(secId) {
+    var s = C[secId];
+    return !!(s && s.examQuestions && s.examQuestions.length);
+  }
   // Look up a question by id within a section — used to reconstruct a saved
   // test attempt's full review from the compact { section, qid } pairs stored
   // in history (see logTestHistory/submitTest), against whatever the live
   // bank currently contains.
+  // Saved attempts can reference either bank, so search both.
   function findQuestion(secId, qid) {
-    var qs = C[secId] && C[secId].questions;
-    if (!qs) return null;
-    for (var i = 0; i < qs.length; i++) { if (qs[i].id === qid) return qs[i]; }
+    var s = C[secId];
+    if (!s) return null;
+    var banks = [s.questions, s.examQuestions];
+    for (var b = 0; b < banks.length; b++) {
+      var qs = banks[b];
+      if (!qs) continue;
+      for (var i = 0; i < qs.length; i++) { if (qs[i].id === qid) return qs[i]; }
+    }
     return null;
   }
   // How many questions a timed test draws from a section: the real exam's
-  // count, capped by however many are actually in the bank right now.
-  function testCount(secId) { return Math.min(REAL_COUNTS[secId] || totalQuestions(secId), totalQuestions(secId)); }
+  // count, capped by however many are actually in the exam bank right now.
+  function testCount(secId) { return Math.min(REAL_COUNTS[secId] || examCount(secId), examCount(secId)); }
   function fmtTime(s) { var m = Math.floor(s / 60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
+
+  /* ---------- Quantitative Comparison normalization ----------
+     QR spec 1.4 items always carry the same four answer choices, in the same
+     order. Defining them here rather than repeating them in every data row
+     keeps the wording identical across the bank and makes it impossible for a
+     stray typo to change what option C means. A data row only supplies
+     `compare` (the two quantities) and `answer` (0-3). */
+  var QC_CHOICES = [
+    'Quantity A is greater',
+    'Quantity B is greater',
+    'The two quantities are equal',
+    'The relationship cannot be determined from the information given'
+  ];
+  function normalizeCompareItems() {
+    SECTION_ORDER.forEach(function (sid) {
+      var s = C[sid];
+      if (!s) return;
+      [s.questions, s.examQuestions].forEach(function (bank) {
+        if (!bank) return;
+        bank.forEach(function (q) {
+          if (q.compare && !q.options) q.options = QC_CHOICES.slice();
+        });
+      });
+    });
+  }
 
   /* ---------- toast (brief non-blocking notification, e.g. timer warnings) ---------- */
   function showToast(msg, kind) {
@@ -130,18 +190,50 @@
       } catch (e) { svg.remove(); }
     });
   }
-  // stem molecule markup (optional, when a question has q.smiles)
-  function stemMolHTML(q) {
-    if (!q.smiles) return '';
-    var w = q.smilesW || 280, h = q.smilesH || 200;
-    return '<div class="q-mol-wrap"><div class="mol q-mol" data-smiles="' + q.smiles + '" data-w="' + w + '" data-h="' + h + '"></div></div>';
-  }
-  // inner markup for one answer option (text or molecule)
-  function optionInnerHTML(q, oi) {
-    if (q.optionSmiles) {
-      return '<span class="letter">' + letter(oi) + '</span><div class="mol" data-smiles="' + q.optionSmiles[oi] + '" data-w="150" data-h="115"></div>';
+  // Stem artwork. A question may carry either:
+  //   q.smiles   — a structure rendered from SMILES, or
+  //   q.stemSvg  — hand-authored SVG, used for curved-arrow mechanism items and
+  //                reaction-coordinate diagrams that SMILES cannot express.
+  // The June 2026 OAT organic spec makes curved-arrow items a core format:
+  // predict the product from starting material + arrows, and predict the
+  // arrows from starting material + product. Both need real arrow artwork.
+  function stemExtrasHTML(q) {
+    var out = '';
+    if (q.stemSvg) {
+      out += '<figure class="q-svg mech-diagram">' + q.stemSvg +
+             (q.stemCaption ? '<figcaption class="mech-cap">' + q.stemCaption + '</figcaption>' : '') +
+             '</figure>';
     }
-    return '<span class="letter">' + letter(oi) + '</span><span>' + q.options[oi] + '</span>';
+    if (q.smiles) {
+      var w = q.smilesW || 280, h = q.smilesH || 200;
+      out += '<div class="q-mol-wrap"><div class="mol q-mol" data-smiles="' + q.smiles + '" data-w="' + w + '" data-h="' + h + '"></div></div>';
+    }
+    // Quantitative Comparison (Quantitative Reasoning spec 1.4): two quantities
+    // shown side by side, optionally above shared given information. The answer
+    // choices are always the same four, supplied by normalizeCompareItems().
+    if (q.compare) {
+      out += '<div class="qc-box">' +
+        (q.compare.info ? '<div class="qc-info">' + q.compare.info + '</div>' : '') +
+        '<div class="qc-cols">' +
+          '<div class="qc-col"><div class="qc-label">Quantity A</div><div class="qc-val">' + q.compare.a + '</div></div>' +
+          '<div class="qc-div" aria-hidden="true"></div>' +
+          '<div class="qc-col"><div class="qc-label">Quantity B</div><div class="qc-val">' + q.compare.b + '</div></div>' +
+        '</div></div>';
+    }
+    return out;
+  }
+  // Inner markup for one answer option: plain text, a SMILES structure, or
+  // hand-authored SVG (used when the choices are themselves curved-arrow sets).
+  function optionInnerHTML(q, oi) {
+    var tag = '<span class="letter">' + letter(oi) + '</span>';
+    if (q.optionSvg) {
+      return tag + '<div class="opt-svg">' + q.optionSvg[oi] +
+             (q.options && q.options[oi] ? '<span class="opt-svg-cap">' + q.options[oi] + '</span>' : '') + '</div>';
+    }
+    if (q.optionSmiles) {
+      return tag + '<div class="mol" data-smiles="' + q.optionSmiles[oi] + '" data-w="150" data-h="115"></div>';
+    }
+    return tag + '<span>' + q.options[oi] + '</span>';
   }
 
   /* ---------- rough scaled-score estimate (200–400) ---------- */
@@ -411,7 +503,8 @@
         row.innerHTML =
           '<div>' +
             '<div class="sec-name">' + s.icon + ' ' + s.name + '</div>' +
-            '<div class="sec-meta">' + s.review.length + ' review topics · ' + s.questions.length + ' practice questions</div>' +
+            '<div class="sec-meta">' + s.review.length + ' review topics · ' + s.questions.length + ' practice questions' +
+              (hasOwnExamBank(id) ? ' · ' + s.examQuestions.length + ' exam-only' : '') + '</div>' +
           '</div>' +
           '<div class="sec-actions">' +
             '<a class="btn btn-sm" href="review.html?section=' + id + '">Review</a>' +
@@ -569,12 +662,12 @@
   function buildPracticeCard(q, num) {
     var card = el('div', 'question');
     var meta = '<div class="q-meta"><span class="q-num">Q' + num + '</span><span class="q-topic">' + q.topic + '</span></div>';
-    var stem = '<div class="q-stem">' + q.stem + '</div>' + stemMolHTML(q);
+    var stem = '<div class="q-stem">' + q.stem + '</div>' + stemExtrasHTML(q);
     card.innerHTML = meta + stem;
 
     var opts = el('div', 'options');
     q.options.forEach(function (text, i) {
-      var b = el('button', q.optionSmiles ? 'option opt-mol-btn' : 'option');
+      var b = el('button', (q.optionSmiles || q.optionSvg) ? 'option opt-mol-btn' : 'option');
       b.innerHTML = optionInnerHTML(q, i);
       b.addEventListener('click', function () { answerPractice(card, opts, exp, q, i); });
       opts.appendChild(b);
@@ -646,9 +739,15 @@
     // or order twice, just like an actual testing session.
     var qs = [];
     test.sections.forEach(function (sid) {
-      var pool = shuffle(C[sid].questions);
+      var pool = testPool(sid);
       var n = testCount(sid);
-      pool.slice(0, n).forEach(function (q) {
+      // Unseen exam items first; top up from the practice bank only if that
+      // bank alone cannot fill a real-length section.
+      var picked = shuffle(pool.exam).slice(0, n);
+      if (picked.length < n) {
+        picked = picked.concat(shuffle(pool.rest).slice(0, n - picked.length));
+      }
+      picked.forEach(function (q) {
         qs.push({ q: q, section: sid });
       });
     });
@@ -731,11 +830,11 @@
     card.innerHTML =
       '<div class="q-meta"><span class="q-num">Question ' + (i + 1) + ' of ' + testState.items.length + '</span>' +
       '<span class="q-topic">' + C[item.section].short + ' · ' + q.topic + '</span></div>' +
-      '<div class="q-stem">' + q.stem + '</div>' + stemMolHTML(q);
+      '<div class="q-stem">' + q.stem + '</div>' + stemExtrasHTML(q);
 
     var opts = el('div', 'options');
     q.options.forEach(function (text, oi) {
-      var b = el('button', q.optionSmiles ? 'option opt-mol-btn' : 'option');
+      var b = el('button', (q.optionSmiles || q.optionSvg) ? 'option opt-mol-btn' : 'option');
       if (testState.answers[i] === oi) b.classList.add('chosen-flag');
       b.innerHTML = optionInnerHTML(q, oi);
       b.addEventListener('click', function () {
@@ -877,10 +976,10 @@
     card.innerHTML =
       '<div class="q-meta"><span class="q-num">Q' + (i + 1) + '</span>' +
       '<span class="q-topic">' + C[sectionId].short + ' · ' + q.topic + '</span></div>' +
-      (q.passageTitle ? '<div class="q-stem"><span class="passage-ref">(' + q.passageTitle + ')</span><br>' + q.stem + '</div>' : '<div class="q-stem">' + q.stem + '</div>') + stemMolHTML(q);
+      (q.passageTitle ? '<div class="q-stem"><span class="passage-ref">(' + q.passageTitle + ')</span><br>' + q.stem + '</div>' : '<div class="q-stem">' + q.stem + '</div>') + stemExtrasHTML(q);
     var opts = el('div', 'options');
     q.options.forEach(function (text, oi) {
-      var b = el('button', q.optionSmiles ? 'option opt-mol-btn' : 'option'); b.disabled = true;
+      var b = el('button', (q.optionSmiles || q.optionSvg) ? 'option opt-mol-btn' : 'option'); b.disabled = true;
       b.innerHTML = optionInnerHTML(q, oi);
       if (oi === q.answer) b.classList.add('correct');
       if (oi === chosen && !right) b.classList.add('wrong');
@@ -1061,6 +1160,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     initNav();
     initTheme();
+    normalizeCompareItems();
     var page = document.body.dataset.page;
     if (page === 'dashboard') initDashboard();
     else if (page === 'review') initReview();

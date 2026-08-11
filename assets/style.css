@@ -733,6 +733,59 @@ a:hover { text-decoration: underline; }
   max-width: 160px;
 }
 .option.opt-mol-btn { align-items: center; }
+
+/* ── Quantitative Comparison items (QR spec 1.4) ── */
+.qc-box {
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  padding: 0.9rem 1rem;
+  margin: 0.2rem 0 1rem;
+}
+.qc-info {
+  text-align: center;
+  font-size: 0.92rem;
+  color: var(--ink);
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px dashed var(--line-2);
+}
+.qc-cols { display: flex; align-items: stretch; gap: 0.5rem; }
+.qc-col { flex: 1; min-width: 0; text-align: center; }
+.qc-div { width: 1px; background: var(--line-2); flex: 0 0 1px; }
+.qc-label {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 0.35rem;
+}
+.qc-val {
+  font-family: 'Georgia', serif;
+  font-size: 1.08rem;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 460px) {
+  .qc-cols { flex-direction: column; gap: 0.75rem; }
+  .qc-div { width: auto; height: 1px; flex: 0 0 1px; }
+}
+
+/* ── curved-arrow mechanism items (June 2026 OAT organic format) ── */
+/* hand-authored SVG attached to a question stem */
+.q-svg { margin: 0.2rem 0 1rem; }
+.q-svg svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+/* hand-authored SVG used as an answer choice */
+.opt-svg { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+.opt-svg svg { display: block; max-width: 100%; height: auto; }
+.opt-svg-cap { font-size: 0.78rem; color: var(--ink-soft); text-align: center; }
+.option.correct .opt-svg-cap { color: var(--correct); }
+.option.wrong   .opt-svg-cap { color: var(--wrong); }
+/* Mechanism artwork is authored against theme variables so it inverts with
+   dark mode; these are the shared primitives every hand-drawn item uses. */
+.mech-atom  { font-family: var(--font-body); font-size: 13px; fill: var(--ink); }
+.mech-small { font-family: var(--font-body); font-size: 10px; fill: var(--ink-soft); }
+.mech-line  { stroke: var(--ink); stroke-width: 1.6; fill: none; }
+.mech-curl  { stroke: var(--primary); stroke-width: 1.8; fill: none; }
+.mech-plus  { font-family: var(--font-body); font-size: 11px; font-weight: 700; fill: var(--primary-d); }
+.mech-neg   { font-family: var(--font-body); font-size: 11px; font-weight: 700; fill: var(--wrong); }
 .mol-err { color: var(--muted); font-size: 0.8rem; font-style: italic; }
 
 /* ── reaction schemes (mol → mol, with reagents over the arrow) ── */
@@ -845,20 +898,63 @@ a:hover { text-decoration: underline; }
   flex-shrink: 0;
 }
 
-/* directing-effects table */
-.eas-table {
+/* directing-effects table, and the general-purpose reference table
+   used throughout the physiology modules */
+.eas-table, .data-table {
   width: 100%;
   border-collapse: collapse;
   margin: 1rem 0;
   font-size: 0.86rem;
 }
-.eas-table th, .eas-table td {
+.eas-table th, .eas-table td,
+.data-table th, .data-table td {
   border: 1px solid var(--line);
   padding: 0.5rem 0.7rem;
   text-align: left;
+  vertical-align: top;
 }
-.eas-table th { background: var(--surface-2); color: var(--ink); font-weight: 700; }
-.eas-table td { color: var(--ink-soft); }
+.eas-table th, .data-table th { background: var(--surface-2); color: var(--ink); font-weight: 700; }
+.eas-table td, .data-table td { color: var(--ink-soft); }
+.data-table strong { color: var(--ink); }
+/* wide tables scroll inside their own box rather than the page */
+.table-scroll { overflow-x: auto; margin: 1rem 0; }
+.table-scroll .data-table { margin: 0; min-width: 460px; }
+
+/* ── ordered pathway chain (blood flow, digestive tract, filtrate route) ── */
+.flow-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.35rem;
+  margin: 1.1rem 0;
+}
+.flow-chain .fc-step {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  padding: 0.42rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+}
+.flow-chain .fc-step .fc-sub {
+  display: block;
+  font-weight: 400;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.flow-chain .fc-arrow {
+  display: flex;
+  align-items: center;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+/* oxygenation state, for the circulatory pathway */
+.flow-chain .fc-step.deoxy { background: var(--primary-l); border-color: var(--primary); }
+.flow-chain .fc-step.oxy   { background: var(--wrong-l); border-color: var(--wrong); }
 .eas-table .tag {
   display: inline-block;
   font-size: 0.7rem;
