@@ -343,6 +343,7 @@
   function toggleTool(mount, tool) {
     var panel = $('#tool-panel-' + tool, mount);
     var btn = $('.tools-btn[data-tool="' + tool + '"]', mount);
+    if (btn && btn.hidden) return;
     var opening = panel.hidden;
     closeAllTools(mount);
     if (opening) { panel.hidden = false; btn.classList.add('active'); }
@@ -350,6 +351,30 @@
   function closeAllTools(mount) {
     $$('.tool-panel', mount).forEach(function (p) { p.hidden = true; });
     $$('.tools-btn', mount).forEach(function (b) { b.classList.remove('active'); });
+  }
+
+  // On the real OAT, the on-screen calculator only appears during Quantitative
+  // Reasoning and the periodic table only during the Survey of Natural
+  // Sciences (Biology/Gen Chem/Organic Chem) — neither is available during
+  // Physics or Reading. Timed tests should match that exactly per question,
+  // since a test can mix sections (e.g. the Full-Length Mock).
+  var TOOL_SECTIONS = {
+    calc: ['quant'],
+    ptable: ['biology', 'genchem', 'ochem']
+  };
+  function updateToolAvailability(secId) {
+    var mount = $('#study-tools');
+    if (!mount || mount.hidden) return;
+    Object.keys(TOOL_SECTIONS).forEach(function (tool) {
+      var allowed = TOOL_SECTIONS[tool].indexOf(secId) !== -1;
+      var btn = $('.tools-btn[data-tool="' + tool + '"]', mount);
+      if (!btn) return;
+      btn.hidden = !allowed;
+      if (!allowed) {
+        var panel = $('#tool-panel-' + tool, mount);
+        if (panel && !panel.hidden) { panel.hidden = true; btn.classList.remove('active'); }
+      }
+    });
   }
 
   /* ---------- calculator (basic 4-function, matches the real OAT's on-screen calc) ---------- */
@@ -815,6 +840,7 @@
     var q = item.q;
     var host = $('#test-question');
     host.innerHTML = '';
+    updateToolAvailability(item.section);
 
     // passage context for reading
     if (q.passageId && C.reading) {
