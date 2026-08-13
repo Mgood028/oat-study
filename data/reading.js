@@ -3,7 +3,6 @@ window.OAT_CONTENT.reading = {
   id: 'reading',
   name: 'Reading Comprehension',
   short: 'Reading',
-  icon: '📖',
   blurb: '50 questions across 3 science passages in 60 minutes. No outside knowledge is required — every answer is supported by the text. The skill is locating and reasoning, not recall.',
   review: [
     {

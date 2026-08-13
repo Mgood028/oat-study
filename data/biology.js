@@ -3,7 +3,6 @@ window.OAT_CONTENT.biology = {
   id: 'biology',
   name: 'Biology',
   short: 'Bio',
-  icon: '🧬',
   blurb: '40 questions in the Survey of Natural Sciences. Cell & molecular biology, genetics, physiology, evolution, and diversity of life.',
   review: [
     {

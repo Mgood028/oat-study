@@ -3,7 +3,6 @@ window.OAT_CONTENT.quant = {
   id: 'quant',
   name: 'Quantitative Reasoning',
   short: 'Quant',
-  icon: '📐',
   blurb: '40 questions in 45 minutes — about 68 seconds each. Algebra, probability and statistics, geometry, and word problems. An on-screen basic calculator is provided.',
   review: [
     {

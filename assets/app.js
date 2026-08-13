@@ -9,6 +9,8 @@
 
   var C = window.OAT_CONTENT || {};
   var SECTION_ORDER = ['biology', 'genchem', 'ochem', 'physics', 'reading', 'quant'];
+  var SECTION_ICON_KEY = { biology: 'dna', genchem: 'flask_conical', ochem: 'link_2', physics: 'zap', quant: 'ruler', reading: 'book_open' };
+  function sectionIconHTML(id) { return OAT_ICON(SECTION_ICON_KEY[id] || 'book'); }
 
   // Timed-test definitions, matched to the real OAT blueprint: question counts
   // per section and per-section timing. Each attempt draws a fresh random
@@ -68,6 +70,49 @@
   function param(name) { return new URLSearchParams(location.search).get(name); }
   function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   function totalQuestions(secId) { return (C[secId] && C[secId].questions.length) || 0; }
+
+  // Explanations are authored as a single HTML string; multi-step ones use
+  // "<strong>Step N:</strong> ...<br>" between steps. For those, render each
+  // step hidden behind a "show next step" button so a worked math/physics
+  // solution gets solved one move at a time instead of dumping the full
+  // answer at once — prose explanations (no <br>) render unchanged.
+  function explanationBodyHTML(raw) {
+    if (raw.indexOf('<br>') === -1) return '<div class="exp-body">' + raw + '</div>';
+    var rows = raw.split('<br>').map(function (s) { return s.trim(); }).filter(Boolean);
+    if (rows.length <= 1) return '<div class="exp-body">' + raw.replace(/<br>/g, '') + '</div>';
+
+    // Authored explanations use two styles: "<strong>Step N:</strong> text"
+    // or the whole clause bolded, "<strong>Step N — does the thing.</strong>
+    // rest". Both start with "Step N" right after the opening tag, so just
+    // strip that lead-in (through an optional colon/dash) and use the
+    // matched number for the badge — whatever HTML follows (mid-tag or not)
+    // still renders fine; a stray </strong> with no opener is harmless.
+    var stepsHTML = rows.map(function (part, i) {
+      var m = part.match(/^<strong>\s*Step\s+(\d+)\s*[:—-]?\s*/i);
+      var cls = 'exp-step exp-step-hidden' + (m ? '' : ' exp-step-note');
+      var body = m ? ('<span class="exp-step-tag">Step ' + m[1] + '</span><span class="exp-step-text">' + part.slice(m[0].length) + '</span>') : part;
+      return '<div class="' + cls + '" data-step="' + i + '">' + body + '</div>';
+    }).join('');
+    var btn = '<button type="button" class="exp-reveal-btn" data-total="' + rows.length + '" data-shown="0">Show step 1 of ' + rows.length + ' &rarr;</button>';
+    return '<div class="exp-body exp-steps">' + stepsHTML + '</div>' + btn;
+  }
+
+  // Wires the "show next step" button for one explanation panel — call once
+  // right after setting exp.innerHTML via explanationBodyHTML().
+  function wireExpReveal(exp) {
+    var btn = exp.querySelector('.exp-reveal-btn');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var shown = parseInt(btn.dataset.shown, 10) + 1;
+      var total = parseInt(btn.dataset.total, 10);
+      var next = exp.querySelector('.exp-step[data-step="' + (shown - 1) + '"]');
+      if (next) { next.classList.remove('exp-step-hidden'); }
+      btn.dataset.shown = shown;
+      if (shown >= total) { btn.remove(); }
+      else { btn.textContent = 'Show step ' + (shown + 1) + ' of ' + total + ' →'; }
+      if (next && next.scrollIntoView) next.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  }
 
   /* ---------- practice vs. exam pools ----------
      Practice drills the `questions` bank with instant explanations, so by the
@@ -274,12 +319,12 @@
     document.documentElement.setAttribute('data-theme', theme);
     Store.set('theme', theme);
     var btn = $('#theme-toggle');
-    if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+    if (btn) btn.innerHTML = OAT_ICON(theme === 'dark' ? 'sun' : 'moon');
   }
   function initTheme() {
     var btn = $('#theme-toggle');
     if (!btn) return;
-    btn.textContent = currentTheme() === 'dark' ? '☀️' : '🌙';
+    btn.innerHTML = OAT_ICON(currentTheme() === 'dark' ? 'sun' : 'moon');
     btn.addEventListener('click', function () {
       applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
     });
@@ -321,9 +366,9 @@
 
     mount.innerHTML =
       '<div class="tools-bar">' +
-        '<button class="tools-btn" data-tool="calc" type="button">🖩 Calculator</button>' +
-        '<button class="tools-btn" data-tool="ptable" type="button">⚛️ Periodic Table</button>' +
-        '<button class="tools-btn" data-tool="notes" type="button">📝 Notes</button>' +
+        '<button class="tools-btn" data-tool="calc" type="button">' + OAT_ICON('calculator') + ' Calculator</button>' +
+        '<button class="tools-btn" data-tool="ptable" type="button">' + OAT_ICON('atom') + ' Periodic Table</button>' +
+        '<button class="tools-btn" data-tool="notes" type="button">' + OAT_ICON('square_pen') + ' Notes</button>' +
       '</div>' +
       '<div class="tool-panel" id="tool-panel-calc" hidden></div>' +
       '<div class="tool-panel" id="tool-panel-ptable" hidden></div>' +
@@ -528,7 +573,7 @@
         var row = el('div', 'sec-row');
         row.innerHTML =
           '<div>' +
-            '<div class="sec-name">' + s.icon + ' ' + s.name + '</div>' +
+            '<div class="sec-name">' + sectionIconHTML(id) + ' ' + s.name + '</div>' +
             '<div class="sec-meta">' + s.review.length + ' review topics · ' + s.questions.length + ' practice questions' +
               (hasOwnExamBank(id) ? ' · ' + s.examQuestions.length + ' exam-only' : '') + '</div>' +
           '</div>' +
@@ -562,7 +607,7 @@
     var switcher = $('#section-switcher');
     if (switcher) {
       SECTION_ORDER.forEach(function (id) {
-        var a = el('a', id === secId ? 'active' : '', C[id].icon + ' ' + C[id].short);
+        var a = el('a', id === secId ? 'active' : '', sectionIconHTML(id) + ' ' + C[id].short);
         a.href = 'review.html?section=' + id;
         switcher.appendChild(a);
       });
@@ -602,7 +647,7 @@
   /* ==========================================================
      PRACTICE (untimed, instant explanations)
      ========================================================== */
-  var practiceState = { secId: null, setIdx: 0, order: [], answered: {}, correct: 0, done: 0 };
+  var practiceState = { secId: null, setIdx: 0, order: [], answered: {}, correct: 0, done: 0, missed: [] };
   var PRACTICE_SET_SIZE = 10;
 
   function initPractice() {
@@ -644,10 +689,14 @@
     practiceState.answered = {};
     practiceState.correct = 0;
     practiceState.done = 0;
+    practiceState.missed = [];
 
     $('#practice-heading').textContent = s.name + (totalSets > 1 ? ' — Set ' + (practiceState.setIdx + 1) + ' of ' + totalSets : '');
     renderSetPicker(practiceState.secId, totalSets);
     updatePracticeScore();
+
+    var recap = $('#practice-recap');
+    if (recap) { recap.classList.add('hidden'); recap.innerHTML = ''; }
 
     var wrap = $('#practice-questions');
     wrap.innerHTML = '';
@@ -687,6 +736,8 @@
 
   function buildPracticeCard(q, num) {
     var card = el('div', 'question');
+    card.id = 'q' + num;
+    card.dataset.num = num;
     var meta = '<div class="q-meta"><span class="q-num">Q' + num + '</span><span class="q-topic">' + q.topic + '</span></div>';
     var stem = '<div class="q-stem">' + q.stem + '</div>' + stemExtrasHTML(q);
     card.innerHTML = meta + stem;
@@ -717,13 +768,39 @@
     var right = chosen === q.answer;
     exp.innerHTML =
       '<div class="verdict-line"><span class="verdict ' + (right ? 'ok' : 'no') + '">' + (right ? 'Correct.' : 'Not quite — the answer is ' + letter(q.answer) + '.') + '</span></div>' +
-      '<div class="exp-body">' + q.explanation + '</div>';
+      explanationBodyHTML(q.explanation);
     exp.classList.add('show');
+    wireExpReveal(exp);
 
     practiceState.done++;
-    if (right) practiceState.correct++;
+    if (right) { practiceState.correct++; } else { practiceState.missed.push(card.dataset.num); }
     recordAnswer(practiceState.secId, q.topic, right);
     updatePracticeScore();
+    if (practiceState.done === practiceState.order.length) showSetRecap();
+  }
+
+  function showSetRecap() {
+    var host = $('#practice-recap');
+    if (!host) return;
+    var totalSets = Math.max(1, Math.ceil(C[practiceState.secId].questions.length / PRACTICE_SET_SIZE));
+    var hasNext = practiceState.setIdx + 1 < totalSets;
+    var pct = Math.round(practiceState.correct / practiceState.order.length * 100);
+    var missedLinks = practiceState.missed.map(function (n) {
+      return '<a class="sr-jump" href="#q' + n + '">' + n + '</a>';
+    }).join('');
+    host.innerHTML =
+      '<div class="set-recap">' +
+        '<div class="sr-score">' + practiceState.correct + '/' + practiceState.order.length + ' <span class="sr-pct">(' + pct + '%)</span></div>' +
+        '<div class="sr-label">Set complete — ' + (practiceState.missed.length ? 'review the ones you missed below' : 'clean sweep, nice work') + '</div>' +
+        (practiceState.missed.length ? '<div class="sr-missed"><span class="sr-missed-label">Missed</span>' + missedLinks + '</div>' : '') +
+        '<div class="sr-actions">' +
+          (hasNext ? '<a class="btn btn-primary" href="practice.html?section=' + practiceState.secId + '&set=' + (practiceState.setIdx + 2) + '">Next set &rarr;</a>' : '') +
+          '<button class="btn" id="sr-retry">Retry this set</button>' +
+        '</div>' +
+      '</div>';
+    host.classList.remove('hidden');
+    $('#sr-retry').addEventListener('click', function () { renderPractice(false); });
+    host.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   function updatePracticeScore() {
@@ -875,7 +952,7 @@
     host.appendChild(card);
     renderMolecules(host);
 
-    $('#flag-btn').textContent = testState.flags[i] ? '⚑ Unflag' : '⚐ Flag for review';
+    $('#flag-btn').innerHTML = testState.flags[i] ? OAT_ICON('flag_off') + ' Unflag' : OAT_ICON('flag') + ' Flag for review';
     $('#test-progress').textContent =
       testState.answers.filter(function (a) { return a != null; }).length + ' of ' + testState.items.length + ' answered';
 
@@ -1018,7 +1095,8 @@
       '<div class="verdict-line"><span class="verdict ' + (right ? 'ok' : 'no') + '">' +
       (chosen == null ? 'Left blank.' : (right ? 'Correct.' : 'You chose ' + letter(chosen) + '.')) +
       ' Answer: ' + letter(q.answer) + '.</span></div>' +
-      '<div class="exp-body">' + q.explanation + '</div>';
+      explanationBodyHTML(q.explanation);
+    wireExpReveal(exp);
     card.appendChild(exp);
     return card;
   }
@@ -1059,7 +1137,7 @@
     if (switcher) {
       switcher.innerHTML = '';
       SECTION_ORDER.forEach(function (id) {
-        var a = el('a', id === secId ? 'active' : '', C[id].icon + ' ' + C[id].short);
+        var a = el('a', id === secId ? 'active' : '', sectionIconHTML(id) + ' ' + C[id].short);
         a.href = 'progress.html?section=' + id;
         switcher.appendChild(a);
       });

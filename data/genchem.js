@@ -3,7 +3,6 @@ window.OAT_CONTENT.genchem = {
   id: 'genchem',
   name: 'General Chemistry',
   short: 'Gen Chem',
-  icon: '⚗️',
   blurb: '30 questions in the Survey of Natural Sciences. Atomic structure, bonding, liquids/solids, stoichiometry, gases, solutions, acids/bases, equilibrium, thermochemistry, kinetics, electrochemistry, and nuclear chemistry.',
   review: [
     {

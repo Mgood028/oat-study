@@ -9,41 +9,51 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css">
+  <link rel="stylesheet" href="assets/style.css?v=3">
 </head>
 <body data-page="signin">
-  <header class="topbar">
-    <div class="topbar-inner">
+  <div class="auth-page">
+    <div class="auth-visual">
       <a class="brand" href="index.html"><span class="lens"></span>OAT<b>Prep</b></a>
+      <div class="auth-visual-body">
+        <h1>Every question you answer, tracked in one place.</h1>
+        <p>Sign in to sync your practice history and timed-test scores across every device you study on.</p>
+        <ul class="auth-features">
+          <li><span class="auth-feature-icon">&#10003;</span>Topic-by-topic accuracy, synced to your account</li>
+          <li><span class="auth-feature-icon">&#10003;</span>Timed tests drawn from a held-out question pool, so scores stay honest</li>
+          <li><span class="auth-feature-icon">&#10003;</span>Pick up right where you left off, on any device</li>
+        </ul>
+      </div>
+      <p class="auth-visual-foot">Built for focused OAT prep &mdash; content reviewed against the official ADA spec.</p>
     </div>
-  </header>
 
-  <main class="wrap">
-    <div class="card auth-shell">
-      <div class="eyebrow">Account</div>
-      <h1 id="auth-title" style="font-family:var(--font-display);font-size:1.6rem;font-weight:600;margin-top:.3rem;">Sign in</h1>
-      <p id="auth-sub" class="muted" style="margin:.4rem 0 1.4rem;font-size:.92rem;">Sign in to pick up your progress right where you left off.</p>
+    <div class="auth-form-side">
+      <div class="auth-shell">
+        <div class="eyebrow">Account</div>
+        <h1 id="auth-title" class="auth-heading">Sign in</h1>
+        <p id="auth-sub" class="muted auth-subhead">Sign in to pick up your progress right where you left off.</p>
 
-      <form id="auth-form">
-        <div class="field">
-          <label for="auth-email">Email</label>
-          <input type="email" id="auth-email" autocomplete="email" required>
-        </div>
-        <div class="field">
-          <label for="auth-password">Password</label>
-          <input type="password" id="auth-password" autocomplete="current-password" minlength="6" required>
-        </div>
-        <div class="auth-error" id="auth-error"></div>
-        <button type="submit" class="btn btn-primary" id="auth-submit" style="width:100%;justify-content:center;">Sign in</button>
-      </form>
+        <form id="auth-form">
+          <div class="field">
+            <label for="auth-email">Email</label>
+            <input type="email" id="auth-email" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <label for="auth-password">Password</label>
+            <input type="password" id="auth-password" autocomplete="current-password" minlength="6" required>
+          </div>
+          <div class="auth-error" id="auth-error"></div>
+          <button type="submit" class="btn btn-primary" id="auth-submit" style="width:100%;justify-content:center;">Sign in</button>
+        </form>
 
-      <p style="margin-top:1.2rem;text-align:center;">
-        <a href="#" id="auth-toggle" style="font-size:.88rem;">Don't have an account? Create one</a>
-      </p>
+        <p class="auth-toggle-line">
+          <a href="#" id="auth-toggle">Don't have an account? Create one</a>
+        </p>
+      </div>
     </div>
-  </main>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="assets/signin.js"></script>
+  <script src="assets/signin.js?v=3"></script>
 </body>
 </html>

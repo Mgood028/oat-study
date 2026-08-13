@@ -19,20 +19,20 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css">
+  <link rel="stylesheet" href="assets/style.css?v=3">
 </head>
 <body data-page="practice">
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="index.html"><span class="lens"></span>OAT<b>Prep</b></a>
-      <button class="nav-toggle" aria-label="Menu">&#9776;</button>
+      <button class="nav-toggle" aria-label="Menu"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16" /><path d="M4 12h16" /><path d="M4 19h16" /></svg></button>
       <nav class="nav">
         <a href="index.html">Home</a>
         <a href="review.html">Review</a>
         <a href="practice.html">Practice</a>
         <a href="test.html">Timed Tests</a>
         <a href="progress.html">Progress</a>
-        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">🌙</button>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle dark mode"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" /></svg></button>
       </nav>
     </div>
   </header>
@@ -50,7 +50,7 @@
       </span>
       <span class="score-pill" id="practice-score"></span>
       <span class="flex gap">
-        <button class="btn btn-sm" id="shuffle-btn">&#128256; Shuffle</button>
+        <button class="btn btn-sm" id="shuffle-btn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 14 4 4-4 4" /><path d="m18 2 4 4-4 4" /><path d="M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22" /><path d="M2 6h1.972a4 4 0 0 1 3.6 2.2" /><path d="M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45" /></svg> Shuffle</button>
         <button class="btn btn-sm btn-ghost" id="reset-btn">Reset</button>
       </span>
     </div>
@@ -62,6 +62,8 @@
 
     <div id="practice-questions"></div>
 
+    <div id="practice-recap" class="hidden"></div>
+
     <div class="flex wrap-gap" style="margin-top:1.5rem;">
       <a class="btn" href="review.html">&larr; Back to review notes</a>
       <a class="btn btn-primary" href="test.html">Ready? Take a timed test &rarr;</a>
@@ -69,7 +71,8 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="assets/auth.js"></script>
+  <script src="assets/icons.js?v=3"></script>
+  <script src="assets/auth.js?v=3"></script>
   <script src="data/biology.js"></script>
   <script src="data/genchem.js"></script>
   <script src="data/ochem.js"></script>
@@ -78,6 +81,6 @@
   <script src="data/quant.js"></script>
   <script src="data/periodic-table.js"></script>
   <script src="assets/smiles-drawer.min.js"></script>
-  <script src="assets/app.js"></script>
+  <script src="assets/app.js?v=3"></script>
 </body>
 </html>

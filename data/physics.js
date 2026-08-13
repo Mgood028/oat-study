@@ -3,7 +3,6 @@ window.OAT_CONTENT.physics = {
   id: 'physics',
   name: 'Physics',
   short: 'Physics',
-  icon: '⚡',
   blurb: '40 questions, its own scored section. Mechanics, energy, waves and optics, electricity and magnetism, fluids, and thermodynamics. Optics is especially high-yield for optometry — including corrective-lens math for the eye.',
   review: [
     {

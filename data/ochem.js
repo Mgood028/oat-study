@@ -3,7 +3,6 @@ window.OAT_CONTENT.ochem = {
   id: 'ochem',
   name: 'Organic Chemistry',
   short: 'Org Chem',
-  icon: '🔗',
   blurb: '30 questions in the Survey of Natural Sciences. Functional groups, nomenclature, stereochemistry, reaction mechanisms, resonance/aromaticity, carbonyl chemistry, and spectroscopy basics. This section is heavily visual — learn to read the structures and the arrow-pushing.',
   review: [
     {
