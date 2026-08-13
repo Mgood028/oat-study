@@ -236,6 +236,27 @@
       } catch (e) { svg.remove(); }
     });
   }
+
+  // Typeset LaTeX math (question stems, options, worked-solution steps)
+  // wherever it appears inside root, delimited by $...$ (inline) or
+  // $$...$$ (display). Plain unicode-symbol text with no delimiters is
+  // untouched, so content that hasn't been converted yet still renders fine.
+  function renderMath(root) {
+    if (!window.renderMathInElement || !root) return;
+    try {
+      // \( \) / \[ \] only — never $ $, since question text is full of
+      // literal currency amounts ("$3 per poster... a $7 store credit")
+      // that $-delimiters would misparse as a single runaway equation.
+      window.renderMathInElement(root, {
+        delimiters: [
+          { left: '\\[', right: '\\]', display: true },
+          { left: '\\(', right: '\\)', display: false }
+        ],
+        throwOnError: false
+      });
+    } catch (e) {}
+  }
+
   // Stem artwork. A question may carry either:
   //   q.smiles   — a structure rendered from SMILES, or
   //   q.stemSvg  — hand-authored SVG, used for curved-arrow mechanism items and
@@ -630,6 +651,8 @@
 
     renderMolecules(body);
 
+    renderMath(body);
+
     // practice CTA
     var cta = $('#review-cta');
     if (cta) cta.href = 'practice.html?section=' + secId;
@@ -647,7 +670,13 @@
   /* ==========================================================
      PRACTICE (untimed, instant explanations)
      ========================================================== */
-  var practiceState = { secId: null, setIdx: 0, order: [], answered: {}, correct: 0, done: 0, missed: [] };
+  var practiceState = { secId: null, setIdx: 0, order: [], answered: {}, correct: 0, done: 0, missed: [], chosen: {} };
+  function setBand(pct) {
+    if (pct === 100) return 'Clean sweep — every one right.';
+    if (pct >= 80) return 'Strong set — just a couple worth another look.';
+    if (pct >= 60) return 'Decent. Review what you missed before moving on.';
+    return 'Rough set — worth reading every explanation below before you continue.';
+  }
   var PRACTICE_SET_SIZE = 10;
 
   function initPractice() {
@@ -690,6 +719,7 @@
     practiceState.correct = 0;
     practiceState.done = 0;
     practiceState.missed = [];
+    practiceState.chosen = {};
 
     $('#practice-heading').textContent = s.name + (totalSets > 1 ? ' — Set ' + (practiceState.setIdx + 1) + ' of ' + totalSets : '');
     renderSetPicker(practiceState.secId, totalSets);
@@ -719,6 +749,7 @@
       wrap.appendChild(buildPracticeCard(s.questions[qi], displayIdx + 1));
     });
     renderMolecules(wrap);
+    renderMath(wrap);
   }
 
   function renderSetPicker(secId, totalSets) {
@@ -771,35 +802,61 @@
       explanationBodyHTML(q.explanation);
     exp.classList.add('show');
     wireExpReveal(exp);
+    renderMolecules(exp);
+    renderMath(exp);
 
     practiceState.done++;
+    practiceState.chosen[card.dataset.num] = chosen;
     if (right) { practiceState.correct++; } else { practiceState.missed.push(card.dataset.num); }
     recordAnswer(practiceState.secId, q.topic, right);
     updatePracticeScore();
     if (practiceState.done === practiceState.order.length) showSetRecap();
   }
 
+  // Set-completion screen — mirrors the timed-test results pattern (score
+  // hero + toggleable full answer review) so finishing a practice set feels
+  // like a real graded moment instead of just a running tally, just without
+  // a timer or the exam-scale gauge (doesn't mean anything for 10 untimed
+  // questions).
   function showSetRecap() {
     var host = $('#practice-recap');
     if (!host) return;
     var totalSets = Math.max(1, Math.ceil(C[practiceState.secId].questions.length / PRACTICE_SET_SIZE));
     var hasNext = practiceState.setIdx + 1 < totalSets;
-    var pct = Math.round(practiceState.correct / practiceState.order.length * 100);
-    var missedLinks = practiceState.missed.map(function (n) {
-      return '<a class="sr-jump" href="#q' + n + '">' + n + '</a>';
-    }).join('');
+    var total = practiceState.order.length;
+    var pct = Math.round(practiceState.correct / total * 100);
+
     host.innerHTML =
-      '<div class="set-recap">' +
-        '<div class="sr-score">' + practiceState.correct + '/' + practiceState.order.length + ' <span class="sr-pct">(' + pct + '%)</span></div>' +
-        '<div class="sr-label">Set complete — ' + (practiceState.missed.length ? 'review the ones you missed below' : 'clean sweep, nice work') + '</div>' +
-        (practiceState.missed.length ? '<div class="sr-missed"><span class="sr-missed-label">Missed</span>' + missedLinks + '</div>' : '') +
-        '<div class="sr-actions">' +
-          (hasNext ? '<a class="btn btn-primary" href="practice.html?section=' + practiceState.secId + '&set=' + (practiceState.setIdx + 2) + '">Next set &rarr;</a>' : '') +
+      '<div class="result-hero">' +
+        '<div class="gauge-num">' + practiceState.correct + '/' + total + '</div>' +
+        '<div class="gauge-label">' + pct + '% correct · Set ' + (practiceState.setIdx + 1) + ' of ' + totalSets + '</div>' +
+        '<p class="result-sub">' + setBand(pct) + '</p>' +
+        '<div class="flex center gap" style="justify-content:center;margin-top:1.2rem;flex-wrap:wrap;">' +
+          '<button class="btn btn-primary" id="sr-review-btn">Review answers</button>' +
+          (hasNext ? '<a class="btn" href="practice.html?section=' + practiceState.secId + '&set=' + (practiceState.setIdx + 2) + '">Next set &rarr;</a>' : '') +
           '<button class="btn" id="sr-retry">Retry this set</button>' +
         '</div>' +
-      '</div>';
+      '</div>' +
+      '<div id="practice-answer-review" class="hidden"></div>';
     host.classList.remove('hidden');
+
     $('#sr-retry').addEventListener('click', function () { renderPractice(false); });
+    $('#sr-review-btn').addEventListener('click', function () {
+      var ar = $('#practice-answer-review');
+      ar.classList.toggle('hidden');
+      if (!ar.dataset.built) {
+        var s = C[practiceState.secId];
+        practiceState.order.forEach(function (qi, displayIdx) {
+          var num = displayIdx + 1;
+          ar.appendChild(buildQuestionReviewCard(displayIdx, practiceState.secId, s.questions[qi], practiceState.chosen[num]));
+        });
+        renderMolecules(ar);
+        renderMath(ar);
+        ar.dataset.built = '1';
+      }
+      if (!ar.classList.contains('hidden') && ar.scrollIntoView) ar.scrollIntoView({ behavior: 'smooth' });
+    });
+
     host.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
@@ -951,6 +1008,7 @@
     card.appendChild(opts);
     host.appendChild(card);
     renderMolecules(host);
+    renderMath(host);
 
     $('#flag-btn').innerHTML = testState.flags[i] ? OAT_ICON('flag_off') + ' Unflag' : OAT_ICON('flag') + ' Flag for review';
     $('#test-progress').textContent =
@@ -1107,6 +1165,7 @@
       host.appendChild(buildQuestionReviewCard(i, item.section, item.q, testState.answers[i]));
     });
     renderMolecules(host);
+    renderMath(host);
   }
 
   // Reopen a saved test attempt (from Progress → Test history) and rebuild
@@ -1124,6 +1183,7 @@
       host.appendChild(buildQuestionReviewCard(i, item.section, q, item.chosen));
     });
     renderMolecules(host);
+    renderMath(host);
   }
 
   /* ==========================================================
