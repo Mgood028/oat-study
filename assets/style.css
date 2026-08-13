@@ -1094,6 +1094,45 @@ a:hover { text-decoration: underline; }
   .breakdown-row .bd-name { flex-basis: 120px; font-size: 0.82rem; }
 }
 
+/* ── auth / account ── */
+.account-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-left: 0.25rem;
+  flex-shrink: 0;
+}
+.account-chip .account-email {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.auth-shell { max-width: 380px; margin: 3.5rem auto; }
+.field { margin-bottom: 1rem; }
+.field label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin-bottom: 0.35rem;
+}
+.field input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--line-2);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+}
+.field input:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+.auth-error { font-size: 0.85rem; color: var(--wrong); min-height: 1.2em; margin-bottom: 0.8rem; }
+
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; transition: none !important; }
 }

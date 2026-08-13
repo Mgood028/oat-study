@@ -36,6 +36,7 @@
     set: function (k, v) {
       try { localStorage.setItem('oat_' + k, JSON.stringify(v)); }
       catch (e) { this._mem[k] = v; }
+      if (window.OAT_SYNC) window.OAT_SYNC.markDirty(k);
     }
   };
 

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="assets/supabase-config.js"></script>
+  <script>try{var t=JSON.parse(localStorage.getItem('oat_theme'));if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — OAT Prep</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="signin">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="index.html"><span class="lens"></span>OAT<b>Prep</b></a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="card auth-shell">
+      <div class="eyebrow">Account</div>
+      <h1 id="auth-title" style="font-family:var(--font-display);font-size:1.6rem;font-weight:600;margin-top:.3rem;">Sign in</h1>
+      <p id="auth-sub" class="muted" style="margin:.4rem 0 1.4rem;font-size:.92rem;">Sign in to pick up your progress right where you left off.</p>
+
+      <form id="auth-form">
+        <div class="field">
+          <label for="auth-email">Email</label>
+          <input type="email" id="auth-email" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="auth-password">Password</label>
+          <input type="password" id="auth-password" autocomplete="current-password" minlength="6" required>
+        </div>
+        <div class="auth-error" id="auth-error"></div>
+        <button type="submit" class="btn btn-primary" id="auth-submit" style="width:100%;justify-content:center;">Sign in</button>
+      </form>
+
+      <p style="margin-top:1.2rem;text-align:center;">
+        <a href="#" id="auth-toggle" style="font-size:.88rem;">Don't have an account? Create one</a>
+      </p>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="assets/signin.js"></script>
+</body>
+</html>
