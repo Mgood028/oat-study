@@ -1,9 +1,11 @@
 /* ============================================================
-   OAT Prep — auth guard + progress sync
-   Loaded on every protected page (not signin.html). Redirects to
-   sign-in if there's no session, renders the account chip in the
-   nav, and syncs the 4 progress-related localStorage keys with the
-   `progress` row for the signed-in user in Supabase.
+   OAT Prep — optional account + progress sync
+   Loaded on every page except signin.html. Signing in is optional:
+   guests can use the whole app and their progress still saves to
+   localStorage on that device, it just never leaves it. Signing in
+   renders the account chip in the nav and syncs the 4 progress-
+   related localStorage keys with the `progress` row for that user
+   in Supabase, so progress backs up and follows them across devices.
    ============================================================ */
 
 (function () {
@@ -111,40 +113,56 @@
     });
   }
 
-  function redirectToSignin() {
-    location.replace('signin.html?redirect=' + encodeURIComponent(location.pathname + location.search));
-  }
-
   function renderAccountUI(user) {
     document.querySelectorAll('.nav').forEach(function (nav) {
-      if (nav.querySelector('.account-chip')) return;
+      var existing = nav.querySelector('.account-chip');
+      if (existing) existing.remove();
       var chip = document.createElement('span');
       chip.className = 'account-chip';
-      var emailSpan = document.createElement('span');
-      emailSpan.className = 'account-email';
-      emailSpan.textContent = user.email || '';
-      chip.appendChild(emailSpan);
-      var out = document.createElement('button');
-      out.type = 'button';
-      out.className = 'btn btn-sm btn-ghost';
-      out.textContent = 'Sign out';
-      out.addEventListener('click', function () {
-        sb.auth.signOut().then(function () { location.href = 'signin.html'; });
-      });
-      chip.appendChild(out);
+      if (user) {
+        var emailSpan = document.createElement('span');
+        emailSpan.className = 'account-email';
+        emailSpan.textContent = user.email || '';
+        chip.appendChild(emailSpan);
+        var out = document.createElement('button');
+        out.type = 'button';
+        out.className = 'btn btn-sm btn-ghost';
+        out.textContent = 'Sign out';
+        out.addEventListener('click', function () {
+          sb.auth.signOut().then(function () { location.reload(); });
+        });
+        chip.appendChild(out);
+      } else {
+        var signIn = document.createElement('a');
+        signIn.className = 'btn btn-sm btn-primary';
+        signIn.href = 'signin.html?redirect=' + encodeURIComponent(location.pathname + location.search);
+        signIn.textContent = 'Sign in to save progress';
+        chip.appendChild(signIn);
+      }
       nav.appendChild(chip);
     });
   }
 
   sb.auth.getSession().then(function (res) {
     var session = res.data && res.data.session;
-    if (!session) { redirectToSignin(); return; }
+    if (!session) { renderAccountUI(null); return; }
     currentUserId = session.user.id;
     renderAccountUI(session.user);
     initialSync(currentUserId);
   });
 
+  // Only react to real sign-in/sign-out events here — the initial
+  // getSession() call above already handles page load, and Supabase
+  // fires other event types (e.g. INITIAL_SESSION, TOKEN_REFRESHED)
+  // that shouldn't re-trigger a sync.
   sb.auth.onAuthStateChange(function (event, session) {
-    if (event === 'SIGNED_OUT' || !session) redirectToSignin();
+    if (event === 'SIGNED_IN' && session) {
+      currentUserId = session.user.id;
+      renderAccountUI(session.user);
+      initialSync(currentUserId);
+    } else if (event === 'SIGNED_OUT') {
+      currentUserId = null;
+      renderAccountUI(null);
+    }
   });
 })();

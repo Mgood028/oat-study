@@ -4,16 +4,6 @@
   <meta charset="UTF-8">
   <script src="assets/supabase-config.js"></script>
   <script>try{var t=JSON.parse(localStorage.getItem('oat_theme'));if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
-  <script>
-    (function () {
-      function toSignin() { location.replace('signin.html?redirect=' + encodeURIComponent(location.pathname + location.search)); }
-      try {
-        var m = window.OAT_SUPABASE_URL.match(/^https:\/\/([^.]+)\./);
-        var ref = m && m[1];
-        if (!ref || !localStorage.getItem('sb-' + ref + '-auth-token')) toSignin();
-      } catch (e) { toSignin(); }
-    })();
-  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Your Progress — OAT Prep</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
